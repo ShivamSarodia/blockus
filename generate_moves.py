@@ -1,7 +1,15 @@
+import os
+import argparse
 import numpy as np
 from tqdm import tqdm
 
-BOARD_SIZE = 20
+parser = argparse.ArgumentParser()
+parser.add_argument('--board_size', type=int, required=True)
+parser.add_argument('--precompute_directory', type=str, required=True)
+args = parser.parse_args()
+
+BOARD_SIZE = args.board_size
+PRECOMPUTE_DIRECTORY = args.precompute_directory
 PIECES = [
     [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)],
     [(0, 0), (1, 0), (1, 1), (2, 1), (3, 1)],
@@ -157,7 +165,8 @@ output["moves_enabled_for_player"] = moves_occupying_new_corners
 
 # Save each of the arrays to disk.
 print("Saving outputs to disk...")
+os.makedirs(PRECOMPUTE_DIRECTORY, exist_ok=True)
 for key, value in output.items():
-    np.save(f"precomputed_moves/{key}.npy", value)
+    np.save(f"{PRECOMPUTE_DIRECTORY}/{key}.npy", value)
 
 print(f"Done.")
