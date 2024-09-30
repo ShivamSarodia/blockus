@@ -8,9 +8,9 @@ from tqdm import tqdm
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--board_size', type=int, required=True)
-parser.add_argument('--precompute_directory', type=str, required=True)
-parser.add_argument('--gamedata_directory', type=str, required=True)
-parser.add_argument('--num_playthroughs', type=int, default=10000)
+parser.add_argument('--precompute_dir', type=str, required=True)
+# parser.add_argument('--games_dir', type=str, required=True)
+# parser.add_argument('--num_playthroughs', type=int, default=10000)
 args = parser.parse_args()
 
 BOARD_SIZE = args.board_size
@@ -31,7 +31,7 @@ def load_moves(dir):
 
     return moves
 
-MOVES = load_moves(args.precompute_directory)
+MOVES = load_moves(args.precompute_dir)
 
 NUM_MOVES = MOVES["new_occupieds"].shape[0]
 
@@ -63,29 +63,43 @@ class State:
         # Track occupancies as the board state.
         self.occupancies = np.zeros((4, BOARD_SIZE, BOARD_SIZE), dtype=bool)
 
+        # Track which players are out of moves.
+        self.players_out_of_moves = 0
+
+        # Player 0 starts.
+        self.player = 0
+
         self.compute_extras = compute_extras
         if compute_extras:
             self.last_move_index = None
 
-    def play_move(self, player, move_index):
-        # Rule out some moves.
-        self.moves_ruled_out |= MOVES["moves_ruled_out_for_all"][move_index]
-        self.moves_ruled_out[player] |= MOVES["moves_ruled_out_for_player"][move_index]
+    def play_move(self, move_index):
+        # Assumes that the move_index provided is valid.
+        # If move_index is None, skips the player's turn (only valid if no moves are available).
+        if move_index is None:
+            self.players_out_of_moves |= 1 << self.player
+        else:
+            # Update occupancies.
+            self.occupancies[self.player] |= MOVES["new_occupieds"][move_index]            
 
-        # Enable new moves for player based on corners.
-        self.moves_enabled[player] |= MOVES["moves_enabled_for_player"][move_index]
+            # Rule out some moves.
+            self.moves_ruled_out |= MOVES["moves_ruled_out_for_all"][move_index]
+            self.moves_ruled_out[self.player] |= MOVES["moves_ruled_out_for_player"][move_index]
 
-        # Compute scores.
-        self.accumulated_scores[player] += MOVES["scores"][move_index]
+            # Enable new moves for player based on corners.
+            self.moves_enabled[self.player] |= MOVES["moves_enabled_for_player"][move_index]
 
-        # Update occupancies.
-        self.occupancies[player] |= MOVES["new_occupieds"][move_index]
+            # Compute scores.
+            self.accumulated_scores[self.player] += MOVES["scores"][move_index]
 
         if self.compute_extras:
-            self.last_move_index = move_index
+            self.last_move_index = move_index        
+        
+        # Update player.
+        self.player = (self.player + 1) % 4
 
-    def select_random_valid_move_index(self, player):
-        valid_moves = ~self.moves_ruled_out[player] & self.moves_enabled[player]
+    def select_random_valid_move_index(self):
+        valid_moves = ~self.moves_ruled_out[self.player] & self.moves_enabled[self.player]
         valid_move_indices = np.flatnonzero(valid_moves)
         if len(valid_move_indices) == 0:
             return None
@@ -94,6 +108,11 @@ class State:
     
     def scores(self):
         return self.accumulated_scores
+    
+    def final_scores(self):
+        # 15 = 1 + 2 + 4 + 8, i.e. 1111 in binary.
+        if self.players_out_of_moves == 15:
+            return self.scores()
     
     def pretty_print_board(self):
         assert self.compute_extras, "Must have compute_extras set to print board."
@@ -139,54 +158,16 @@ class State:
         plt.show()
 
 
-def run(playthrough_count):
-    print("Starting run")
+def play_game():
+    print("Starting game...")
 
-    boards = []
-    turns = []
-    results = []
-    
-    for _ in tqdm(range(playthrough_count)):
-        current_player = random.randint(0, 3)
-        state = State()
+    state = State()
+    while True:
+        move_index = state.select_random_valid_move_index()
+        state.play_move(move_index)
 
-        skipped_players = set()
-        num_turns = 0
+        score = state.final_scores()
+        if score is not None:
+            return score
 
-        while True:
-            boards.append(state.occupancies.copy())
-            turns.append(np.eye(4)[current_player])
-            num_turns += 1
-
-            move_index = state.select_random_valid_move_index(current_player)
-            if move_index is None:
-                skipped_players.add(current_player)
-                if len(skipped_players) == 4:
-                    break
-            else:
-                state.play_move(current_player, move_index)
-
-            current_player = (current_player + 1) % 4
-
-        result = [0, 0, 0, 0]
-        result[np.argmax(state.scores())] = 1
-        results.extend([result] * num_turns)
-
-    boards = np.array(boards)
-    turns = np.array(turns)
-    results = np.array(results)
-
-    samples = boards.shape[0]
-    assert boards.shape == (samples, 4, BOARD_SIZE, BOARD_SIZE)
-    assert turns.shape == (samples, 4)
-    assert results.shape == (samples, 4)    
-
-    print("Saving outputs to disk...")
-    os.makedirs(args.gamedata_directory, exist_ok=True)
-    
-    # Save the data.
-    np.save(f"{args.gamedata_directory}/boards.npy", boards)
-    np.save(f"{args.gamedata_directory}/turns.npy", turns)
-    np.save(f"{args.gamedata_directory}/results.npy", results)
-
-run(args.num_playthroughs)
+print(play_game())
