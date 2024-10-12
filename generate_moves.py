@@ -39,6 +39,7 @@ output = {}
 print("Populating values...")
 
 output["new_occupieds"] = []
+output["rotation_mapping"] = []
 output["piece_indices"] = []
 output["new_corners"] = []
 output["new_adjacents"] = []
@@ -78,6 +79,23 @@ for piece_index in tqdm(range(len(PIECES))):
     output["new_occupieds"].append(occupieds_for_piece)
     output["piece_indices"] += [piece_index] * occupieds_for_piece.shape[0]
 
+    # Now, compute an array which maps each move to which move it would be if rotated 90 degrees.
+    rotated_occupieds_for_piece = np.rot90(occupieds_for_piece, axes=(1, 2))
+    comparison = np.equal(occupieds_for_piece[:, np.newaxis, :, :], rotated_occupieds_for_piece)
+    assert comparison.shape == (occupieds_for_piece.shape[0], occupieds_for_piece.shape[0], BOARD_SIZE, BOARD_SIZE)
+    
+    comparison_result = comparison.all(axis=(2, 3))
+
+    # Assert that each row and column of comparison result has exactly one True value.
+    assert np.all(np.sum(comparison_result, axis=0) == 1)
+    assert np.all(np.sum(comparison_result, axis=1) == 1)
+
+    # Return the index of the True value in each row and column as the remapping.
+    remapping = np.argmax(comparison_result, axis=0)
+    assert remapping.shape == (occupieds_for_piece.shape[0],)
+
+    output["rotation_mapping"].append(remapping)
+
     for i, new_occupieds in enumerate(occupieds_for_piece):
         new_corners = np.zeros((1, BOARD_SIZE, BOARD_SIZE), dtype=bool)
         new_adjacents = np.zeros((1, BOARD_SIZE, BOARD_SIZE), dtype=bool)
@@ -109,6 +127,21 @@ for piece_index in tqdm(range(len(PIECES))):
 
 output["new_occupieds"] = np.concatenate(output["new_occupieds"])
 NUM_MOVES = output["new_occupieds"].shape[0]
+
+rows_so_far = 0
+for rm in output["rotation_mapping"]:
+    rm += rows_so_far
+    rows_so_far += len(rm)
+
+rotation_mapping = np.concatenate(output["rotation_mapping"])
+assert rotation_mapping.shape == (NUM_MOVES,)
+assert (np.sort(rotation_mapping) == np.arange(NUM_MOVES)).all()
+
+output["rotation_mapping"] = np.zeros((4, NUM_MOVES), dtype=int)
+output["rotation_mapping"][0] = np.arange(NUM_MOVES)
+output["rotation_mapping"][1] = rotation_mapping
+output["rotation_mapping"][2] = rotation_mapping[rotation_mapping]
+output["rotation_mapping"][3] = rotation_mapping[rotation_mapping[rotation_mapping]]
 
 output["scores"] = np.sum(output["new_occupieds"], axis=(1, 2), dtype=int)
 assert output["scores"].shape == (NUM_MOVES,)
