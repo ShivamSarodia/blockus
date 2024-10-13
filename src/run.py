@@ -21,6 +21,8 @@ parser_simulate.add_argument('--debug_mode', action='store_true')
 args = parser.parse_args()
 
 if args.command == 'generate_moves':
+    # TODO: This is broken right now, and we'll need to fix it up before we next run
+    # move generation.
     import move_generation
     move_generation.main(args)
 
