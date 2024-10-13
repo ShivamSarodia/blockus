@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from moves import BOARD_SIZE
+from constants import BOARD_SIZE
 
 class Display:
     def __init__(self, occupancies, overlay_dots=None):

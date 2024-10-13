@@ -5,7 +5,7 @@ from typing import Dict, NamedTuple
 from tqdm import tqdm
 
 import player_pov_helpers as player_pov_helpers
-from moves import MOVES, BOARD_SIZE, NUM_MOVES
+from constants import MOVES, BOARD_SIZE, NUM_MOVES
 from state import State
 from display import Display
 from data_recorder import DataRecorder
@@ -171,7 +171,7 @@ class RandomAgent:
         return state.select_random_valid_move_index()  
 
 
-def play_game(debug_mode, data_recorder):
+def play_game(data_recorder):
     config = Config(
         num_mcts_rollouts=500,
         # Reasonable guess at an exploration parameter I guess?
@@ -191,7 +191,7 @@ def play_game(debug_mode, data_recorder):
     ]
 
     game_over = False
-    state = State(debug_mode)
+    state = State()
     while not game_over:
         agent = agents[state.player]
         move_index = agent.select_move_index(state)
@@ -199,10 +199,11 @@ def play_game(debug_mode, data_recorder):
 
     data_recorder.record_game_end(state.result())
 
-
-def main(args):
-    data_recorder = DataRecorder(args.output_dir)
-    while True:
-        play_game(args.debug_mode, data_recorder)
-    data_recorder.flush()
-
+def run(output_data_dir):
+    data_recorder = DataRecorder(output_data_dir)
+    try:
+        while True:
+            play_game(data_recorder)
+    except:
+        data_recorder.flush()
+        raise

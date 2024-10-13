@@ -1,14 +1,12 @@
 import numpy as np
 import functools
 
-from moves import MOVES, NUM_MOVES, BOARD_SIZE
+from constants import MOVES, NUM_MOVES, BOARD_SIZE, DEBUG_MODE
 from display import Display
 
 
 class State:
-    def __init__(self, debug_mode=False):
-        self.debug_mode = debug_mode
-
+    def __init__(self):
         # Moves for each player that are permissible because they intersect
         # with an exposed corner.
         self.moves_enabled = self._get_initial_moves_enabled()
@@ -28,7 +26,7 @@ class State:
         self.player = 0
 
         # Index of the previous move played, useful for rendering the game.
-        if self.debug_mode:
+        if DEBUG_MODE:
             self.last_move_index = None
 
     @staticmethod
@@ -51,9 +49,8 @@ class State:
         new_state.accumulated_scores = self.accumulated_scores.copy()
         new_state.occupancies = self.occupancies.copy()
         new_state.player = self.player
-        new_state.debug_mode = self.debug_mode
 
-        if self.debug_mode:
+        if DEBUG_MODE:
             new_state.last_move_index = self.last_move_index
 
         return new_state
@@ -65,7 +62,7 @@ class State:
 
         This method assumes the provided move is valid.
         """
-        if self.debug_mode and not self.valid_moves_array()[move_index]:
+        if DEBUG_MODE and not self.valid_moves_array()[move_index]:
             raise "Playing an invalid move!"
 
         # Update occupancies.
@@ -81,7 +78,7 @@ class State:
         # Compute scores.
         self.accumulated_scores[self.player] += MOVES["scores"][move_index]
 
-        if self.debug_mode:
+        if DEBUG_MODE:
             self.last_move_index = move_index        
         
         # Find the next player who has a valid move.
@@ -107,5 +104,5 @@ class State:
         return r / np.sum(r)
     
     def pretty_print_board(self):
-        assert self.debug_mode, "Must have debug_mode set to print board."
+        assert DEBUG_MODE, "Must have debug_mode set to print board."
         Display(self.occupancies, MOVES["new_occupieds"][self.last_move_index]).show()

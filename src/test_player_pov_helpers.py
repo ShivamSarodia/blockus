@@ -2,7 +2,7 @@ import numpy as np
 
 import player_pov_helpers
 from state import State
-from moves import NUM_MOVES, BOARD_SIZE, MOVES
+from constants import NUM_MOVES, BOARD_SIZE, MOVES
 
 NUM_STEPS = 10
 
