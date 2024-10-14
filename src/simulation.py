@@ -81,11 +81,6 @@ class MCTSAgent:
             search_root.children_visit_counts / np.sum(search_root.children_visit_counts),
         )
 
-        # TODO: We need to figure out the right place to define the interface here. Because the
-        # get_value_and_expand_children operation needs to revert whatever operation we perform
-        # on the state to get into the NN image/target state.
-        # data_buffer.report_node_search_distribution(state, search_root.children_visit_counts)
-
         # Select the move to play now.
         return search_root.get_move_index_to_play(state)
     

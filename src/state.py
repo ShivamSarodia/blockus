@@ -9,7 +9,7 @@ class State:
     def __init__(self):
         # Moves for each player that are permissible because they intersect
         # with an exposed corner.
-        self.moves_enabled = self._get_initial_moves_enabled()
+        self.moves_enabled = self._get_initial_moves_enabled().copy()
 
         # Moves for each player that are ruled out by conflict
         # with an occupied square, conflict with a player's own adjacent
