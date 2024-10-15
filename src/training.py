@@ -35,10 +35,22 @@ def _load_datasets(games_dir):
     return TensorDataset(*train_data), TensorDataset(*test_data)
 
 
+def _print_losses(value_loss, policy_loss):
+    print("   Avg value loss:  ", value_loss)
+    print("   Avg policy loss: ", policy_loss)
+    print("   Avg total loss:  ", value_loss + policy_loss)
+
+
 def _train(dataloader, optimizer, model):
     size = len(dataloader.dataset)
     model.train()
     for batch, (occupancies, children_visits, values) in enumerate(dataloader):
+        batch_size = len(occupancies)
+
+        occupancies = occupancies.to("mps")
+        children_visits = children_visits.to("mps")
+        values = values.to("mps")
+
         pred_values, pred_children_visits = model(occupancies)
         value_loss = nn.CrossEntropyLoss()(pred_values, values)
         policy_loss = nn.CrossEntropyLoss()(pred_children_visits, children_visits)
@@ -49,77 +61,84 @@ def _train(dataloader, optimizer, model):
         optimizer.step()
         optimizer.zero_grad()
 
-        # if batch % 100 == 0:
-        loss, current = loss.item(), (batch + 1) * len(occupancies)
-        print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+        current = (batch + 1) * batch_size 
+        print(f"Training [{current:>5d}/{size:>5d}]")
+        _print_losses(
+            value_loss.item(),
+            policy_loss.item(),
+        )
 
-def _test(dataloader, model, value_losses, policy_losses, winner_accuracies, move_accuracies):
+def _test(dataloader, model, value_losses, policy_losses):
     size = len(dataloader.dataset)
     model.eval()
-    value_loss, policy_loss, correct_winner, correct_move = 0, 0, 0, 0
+    sum_value_loss, sum_policy_loss = 0.0, 0.0
     with torch.no_grad():
         for occupancies, children_visits, values in dataloader:
-            pred_values, pred_children_visits = model(occupancies)         
-            value_loss += nn.CrossEntropyLoss()(pred_values, values).item()
-            policy_loss += nn.CrossEntropyLoss()(pred_children_visits, children_visits).item()
-            correct_winner += (pred_values.argmax(1) == values.argmax(1)).type(torch.float).sum().item()
-            correct_move += (pred_children_visits.argmax(1) == children_visits.argmax(1)).type(torch.float).sum().item()
+            occupancies = occupancies.to("mps")
+            children_visits = children_visits.to("mps")
+            values = values.to("mps")
 
-    value_loss /= size
-    policy_loss /= size
-    correct_winner /= size
-    correct_move /= size
+            pred_values, pred_children_visits = model(occupancies)         
+            sum_value_loss += nn.CrossEntropyLoss(reduction="sum")(pred_values, values).item()
+            sum_policy_loss += nn.CrossEntropyLoss(reduction="sum")(pred_children_visits, children_visits).item()
+
+    value_loss = sum_value_loss / size
+    policy_loss = sum_policy_loss / size
+
     value_losses.append(value_loss)
     policy_losses.append(policy_loss)
-    winner_accuracies.append(correct_winner * 100)
-    move_accuracies.append(correct_move * 100)
-    print(f"Test Error: \n Winner accuracy: {(100*correct_winner):>0.1f}%, \n Move accuracy: {(100*correct_move):>0.1f}%, \n Avg value loss: {value_loss:>8f}, \n Avg policy loss: {policy_loss:>8f} \n")
+    print("Test Error:")
+    _print_losses(
+        value_loss,
+        policy_loss,
+    )
 
 def run(games_dir, output_dir):
     train_dataset, test_dataset = _load_datasets(games_dir)
     train_dataloader = DataLoader(train_dataset, batch_size=256, shuffle=True)
     test_dataloader = DataLoader(test_dataset, batch_size=256, shuffle=True)
 
-    model = NeuralNet()
+    model = NeuralNet().to("mps")
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
-    epochs = 10
+    epochs = 30
     value_losses = []
     policy_losses = []
-    winner_accuracies = []
-    move_accuracies = []
 
-    for t in range(epochs):
-        print(f"Epoch {t+1}\n-------------------------------")
-        _train(train_dataloader, optimizer, model)
-        _test(test_dataloader, model, value_losses, policy_losses, winner_accuracies, move_accuracies)
+    try:
+        for t in range(epochs):
+            print(f"Epoch {t+1}\n-------------------------------")
+            _train(train_dataloader, optimizer, model)
+            _test(test_dataloader, model, value_losses, policy_losses)
+    except KeyboardInterrupt:
+        print("Training interrupted.")
     
     # Plotting the value loss, policy loss, winner accuracy, and move accuracy over epochs side by side
     fig, axs = plt.subplots(2, 2, figsize=(15, 10))
     
-    axs[0, 0].plot(range(1, epochs + 1), value_losses, label='Value Loss', color='blue')
+    axs[0, 0].plot(range(1, t + 1), value_losses, label='Value Loss', color='blue')
     axs[0, 0].set_xlabel('Epoch')
     axs[0, 0].set_ylabel('Loss')
     axs[0, 0].set_title('Value Loss over Time')
     axs[0, 0].legend()
     
-    axs[0, 1].plot(range(1, epochs + 1), policy_losses, label='Policy Loss', color='orange')
+    axs[0, 1].plot(range(1, t + 1), policy_losses, label='Policy Loss', color='orange')
     axs[0, 1].set_xlabel('Epoch')
     axs[0, 1].set_ylabel('Loss')
     axs[0, 1].set_title('Policy Loss over Time')
     axs[0, 1].legend()
     
-    axs[1, 0].plot(range(1, epochs + 1), winner_accuracies, label='Winner Accuracy', color='green')
-    axs[1, 0].set_xlabel('Epoch')
-    axs[1, 0].set_ylabel('Accuracy (%)')
-    axs[1, 0].set_title('Winner Accuracy over Time')
-    axs[1, 0].legend()
+    # axs[1, 0].plot(range(1, epochs + 1), winner_accuracies, label='Winner Accuracy', color='green')
+    # axs[1, 0].set_xlabel('Epoch')
+    # axs[1, 0].set_ylabel('Accuracy (%)')
+    # axs[1, 0].set_title('Winner Accuracy over Time')
+    # axs[1, 0].legend()
     
-    axs[1, 1].plot(range(1, epochs + 1), move_accuracies, label='Move Accuracy', color='red')
-    axs[1, 1].set_xlabel('Epoch')
-    axs[1, 1].set_ylabel('Accuracy (%)')
-    axs[1, 1].set_title('Move Accuracy over Time')
-    axs[1, 1].legend()
+    # axs[1, 1].plot(range(1, epochs + 1), move_accuracies, label='Move Accuracy', color='red')
+    # axs[1, 1].set_xlabel('Epoch')
+    # axs[1, 1].set_ylabel('Accuracy (%)')
+    # axs[1, 1].set_title('Move Accuracy over Time')
+    # axs[1, 1].legend()
     
     plt.tight_layout()
     plt.show()
