@@ -13,8 +13,17 @@ BUFFER_LIMIT = 1000
 
 class DataRecorder:
     def __init__(self, directory):
-        self.directory = directory
-        os.makedirs(directory, exist_ok=True)        
+        self.children_visit_distribution_directory = os.path.join(directory, 'children_visit_distributions')
+        self.occupancies_directory = os.path.join(directory, 'occupancies')
+        self.values_directory = os.path.join(directory, 'values')
+
+        for d in [self.children_visit_distribution_directory, self.occupancies_directory, self.values_directory]:
+            os.makedirs(d, exist_ok=True)
+
+        if DEBUG_MODE:
+            self.states_directory = os.path.join(directory, 'states')
+            os.makedirs(self.states_directory, exist_ok=True)
+            self.states = []
 
         self.occupancies = []
         self.children_visit_distributions = []
@@ -22,9 +31,6 @@ class DataRecorder:
 
         # This is used to rotate the values correctly for each state when the game is over.
         self.players_on_current_game = []
-
-        if DEBUG_MODE:
-            self.states = []
 
     def record_rollout_result(self, state: State, children_visit_distribution: np.ndarray):
         """
@@ -60,15 +66,15 @@ class DataRecorder:
             return
 
         key = str(int(time.time() * 1000))
-        np.save(f"{self.directory}/occupancies_{key}.npy", np.array(self.occupancies))
-        np.save(f"{self.directory}/children_visit_distributions_{key}.npy", np.array(self.children_visit_distributions))
-        np.save(f"{self.directory}/values_{key}.npy", np.array(self.values))
+        np.save(f"{self.occupancies_directory}/{key}.npy", np.array(self.occupancies))
+        np.save(f"{self.children_visit_distribution_directory}/{key}.npy", np.array(self.children_visit_distributions))
+        np.save(f"{self.values_directory}/{key}.npy", np.array(self.values))
 
         self.occupancies = []
         self.children_visit_distributions = []
         self.values = []
 
         if DEBUG_MODE:
-            with open(f"{self.directory}/states_{key}.pkl", "wb") as f:
+            with open(f"{self.states_directory}/{key}.pkl", "wb") as f:
                 pickle.dump(self.states, f)
             self.states = []

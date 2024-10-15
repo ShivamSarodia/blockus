@@ -17,6 +17,12 @@ parser_simulate.add_argument('--moves_dir', type=str, required=True)
 parser_simulate.add_argument('--output_dir', type=str, required=True)
 parser_simulate.add_argument('--debug_mode', action='store_true')    
 
+# Subparser for 'train'
+parser_train = subparsers.add_parser('train', help='Train neural network')
+parser_train.add_argument('--moves_dir', type=str, required=True)
+parser_train.add_argument('--games_dir', type=str, required=True)
+parser_train.add_argument('--output_dir', type=str, required=True)
+
 # Parse the arguments
 args = parser.parse_args()
 
@@ -35,6 +41,14 @@ elif args.command == 'simulate':
 
     import simulation
     simulation.run(args.output_dir)
+
+
+elif args.command == 'train':
+    import constants 
+    constants.load(args.moves_dir, False)
+
+    import training
+    training.run(args.games_dir, args.output_dir)
 
 
 else:

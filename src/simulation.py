@@ -4,11 +4,13 @@ import random
 from typing import Dict, NamedTuple
 from tqdm import tqdm
 
-import player_pov_helpers as player_pov_helpers
+import player_pov_helpers
+import neural_net
 from constants import MOVES, BOARD_SIZE, NUM_MOVES
 from state import State
 from display import Display
 from data_recorder import DataRecorder
+from neural_net import NeuralNet
 
 
 def softmax(x):
@@ -25,13 +27,14 @@ class Config(NamedTuple):
 
 
 class MCTSAgent:
-    def __init__(self, config: Config, data_recorder: DataRecorder):
+    def __init__(self, config: Config, model: NeuralNet, data_recorder: DataRecorder):
         self.config = config
+        self.model = model
         self.data_recorder = data_recorder
 
     def select_move_index(self, state: State):
         search_root = MCTSValuesNode(self.config)
-        search_root.get_value_and_expand_children(state)
+        search_root.get_value_and_expand_children(state, self.model)
 
         for _ in range(self.config.num_mcts_rollouts):
             scratch_state = state.clone()
@@ -67,7 +70,7 @@ class MCTSAgent:
                 value = scratch_state.result()
             else:
                 new_node = MCTSValuesNode(self.config)
-                value = new_node.get_value_and_expand_children(scratch_state)
+                value = new_node.get_value_and_expand_children(scratch_state, self.model)
                 nodes_visited[-1].move_index_to_child_node[moves_played[-1]] = new_node
 
             # Now, backpropagate the value up the visited notes.
@@ -125,7 +128,7 @@ class MCTSValuesNode:
         move_index_selected = np.argmax(ucb_scores)
         return move_index_selected
 
-    def get_value_and_expand_children(self, state: State):
+    def get_value_and_expand_children(self, state: State, model: NeuralNet):
         """
         Populate the children arrays by calling the NN, and return
         the value of the current state.
@@ -133,12 +136,7 @@ class MCTSValuesNode:
         # TODO: This is supposed to be input to the NN.
         player_pov_occupancies = player_pov_helpers.occupancies_to_player_pov(state.occupancies, state.player)
 
-        # TODO: These are supposed to be output from the NN.
-        player_pov_values = np.random.random_sample((4,))
-        player_pov_values /= np.sum(player_pov_values)
-
-        player_pov_children_priors = np.random.random_sample((NUM_MOVES,))
-        player_pov_children_priors /= np.sum(player_pov_children_priors)
+        player_pov_values, player_pov_children_priors = neural_net.evaluate(model, player_pov_occupancies)
 
         # Rotate the player POV values and policy back to the original player's perspective.
         universal_values = player_pov_helpers.values_to_player_pov(player_pov_values, -state.player)
@@ -166,7 +164,7 @@ class RandomAgent:
         return state.select_random_valid_move_index()  
 
 
-def play_game(data_recorder):
+def play_game(model: NeuralNet, data_recorder: DataRecorder):
     config = Config(
         num_mcts_rollouts=500,
         # Reasonable guess at an exploration parameter I guess?
@@ -179,10 +177,10 @@ def play_game(data_recorder):
     )
 
     agents = [
-        MCTSAgent(config, data_recorder),
-        MCTSAgent(config, data_recorder),
-        MCTSAgent(config, data_recorder),
-        MCTSAgent(config, data_recorder),
+        MCTSAgent(config, model, data_recorder),
+        MCTSAgent(config, model, data_recorder),
+        MCTSAgent(config, model, data_recorder),
+        MCTSAgent(config, model, data_recorder),
     ]
 
     game_over = False
@@ -196,9 +194,10 @@ def play_game(data_recorder):
 
 def run(output_data_dir):
     data_recorder = DataRecorder(output_data_dir)
+    model = NeuralNet()
     try:
         while True:
-            play_game(data_recorder)
+            play_game(model, data_recorder)
     except:
         data_recorder.flush()
         raise
