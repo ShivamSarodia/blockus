@@ -88,12 +88,14 @@ class NeuralNet(nn.Module):
         return self.value_head(x), self.policy_head(x)
     
 
+# With a cache of size 5000, that trims to 2500, we get a hit rate of about 10-15%. 
+# That's not a huge improvement, so I'll be tabling the cache for now.
 def evaluate(model, occupancies: np.ndarray, device: str) -> Tuple[np.ndarray, np.ndarray]:
-    occupancies_tensor = torch.from_numpy(occupancies).to(dtype=torch.float, device=device)
+    occupancies_tensor = torch.from_numpy(occupancies).to(dtype=torch.float, device=device).unsqueeze(0)
     model.eval()
     with torch.inference_mode():
         raw_values, raw_policies = model(occupancies_tensor)
     return (
-        torch.softmax(raw_values, dim=1).cpu().numpy(),
-        raw_policies.cpu().numpy(),
+        torch.softmax(raw_values, dim=1).squeeze(0).cpu().numpy(),
+        raw_policies.squeeze(0).cpu().numpy(),
     )

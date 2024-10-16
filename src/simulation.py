@@ -12,6 +12,7 @@ from state import State
 from display import Display
 from data_recorder import DataRecorder
 from neural_net import NeuralNet
+from multiprocessing import Pool
 
 
 def softmax(x):
@@ -197,6 +198,8 @@ def play_game(model: NeuralNet, data_recorder: DataRecorder):
         game_over = state.play_move(move_index)
 
     data_recorder.record_game_end(state.result())
+
+PROCESSES = 2
 
 def run(output_data_dir):
     data_recorder = DataRecorder(output_data_dir)
