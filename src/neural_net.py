@@ -13,7 +13,7 @@ import torch.nn.functional as F
 
 from constants import BOARD_SIZE, NUM_MOVES
 
-# # Define some network architecture parameters
+# This is the original network.
 # MAIN_BODY_CHANNELS = 256
 # VALUE_HEAD_CHANNELS = 8
 # VALUE_HEAD_FLAT_LAYER_WIDTH = 256
@@ -22,7 +22,7 @@ from constants import BOARD_SIZE, NUM_MOVES
 
 # Define some network architecture parameters
 MAIN_BODY_CHANNELS = 128
-VALUE_HEAD_CHANNELS = 4
+VALUE_HEAD_CHANNELS = 32
 VALUE_HEAD_FLAT_LAYER_WIDTH = 128
 POLICY_HEAD_CHANNELS = 128
 RESIDUAL_BLOCKS = 19
@@ -89,11 +89,11 @@ class NeuralNet(nn.Module):
     
 
 def evaluate(model, occupancies: np.ndarray, device: str) -> Tuple[np.ndarray, np.ndarray]:
-    occupancies_tensor = torch.from_numpy(occupancies).to(dtype=torch.float, device=device).unsqueeze(0)
+    occupancies_tensor = torch.from_numpy(occupancies).to(dtype=torch.float, device=device)
     model.eval()
     with torch.inference_mode():
         raw_values, raw_policies = model(occupancies_tensor)
     return (
-        torch.softmax(raw_values, dim=1).squeeze(0).cpu().numpy(),
-        torch.softmax(raw_policies, dim=1).squeeze(0).cpu().numpy(),
+        torch.softmax(raw_values, dim=1).cpu().numpy(),
+        raw_policies.cpu().numpy(),
     )

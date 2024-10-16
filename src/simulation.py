@@ -3,6 +3,7 @@ import cProfile
 import random
 from typing import Dict, NamedTuple
 from tqdm import tqdm
+import time
 
 import player_pov_helpers
 import neural_net
@@ -136,11 +137,16 @@ class MCTSValuesNode:
         # TODO: This is supposed to be input to the NN.
         player_pov_occupancies = player_pov_helpers.occupancies_to_player_pov(state.occupancies, state.player)
 
-        player_pov_values, player_pov_children_priors = neural_net.evaluate(model, player_pov_occupancies)
+        player_pov_values, player_pov_children_prior_logits = neural_net.evaluate(model, player_pov_occupancies, "mps")
 
         # Rotate the player POV values and policy back to the original player's perspective.
         universal_values = player_pov_helpers.values_to_player_pov(player_pov_values, -state.player)
-        universal_children_priors = player_pov_helpers.moves_array_to_player_pov(player_pov_children_priors, -state.player)
+        universal_children_prior_logits = player_pov_helpers.moves_array_to_player_pov(player_pov_children_prior_logits, -state.player)
+
+        # Softmax the children priors while excluding invalid moves.
+        universal_children_priors = np.zeros((NUM_MOVES,), dtype=float)
+        valid_moves = state.valid_moves_array()
+        universal_children_priors[valid_moves] = softmax(universal_children_prior_logits[valid_moves])
 
         self.children_value_sums = np.zeros((4, NUM_MOVES), dtype=float)
         self.children_visit_counts = np.zeros(NUM_MOVES, dtype=int)
@@ -194,10 +200,13 @@ def play_game(model: NeuralNet, data_recorder: DataRecorder):
 
 def run(output_data_dir):
     data_recorder = DataRecorder(output_data_dir)
-    model = NeuralNet()
+    model = NeuralNet().to("mps")
     try:
         while True:
+            print("Playing game...")
+            start = time.time()
             play_game(model, data_recorder)
+            print(f"Game finished in {time.time() - start:.2f}s")
     except:
         data_recorder.flush()
         raise
