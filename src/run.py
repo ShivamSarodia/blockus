@@ -1,4 +1,5 @@
 import argparse
+import logging
 
 def main():
     # Create the top-level parser
@@ -39,6 +40,13 @@ def main():
         # expect these constants to be available at import-time.
         import constants 
         constants.load(args.moves_dir, args.debug_mode)
+
+        if args.debug_mode:
+            logging.basicConfig(
+                level=logging.DEBUG,
+                format="%(asctime)s,%(msecs)d %(levelname)s: %(message)s",
+                datefmt="%H:%M:%S",
+            )
 
         import simulation
         simulation.run(args.output_dir)

@@ -2,79 +2,89 @@ import time
 import os
 import numpy as np
 import pickle
+import random
 
 import player_pov_helpers
-from constants import DEBUG_MODE
 from state import State
 
-
-BUFFER_LIMIT = 1000
-
-
 class DataRecorder:
-    def __init__(self, directory):
-        self.children_visit_distribution_directory = os.path.join(directory, 'children_visit_distributions')
-        self.occupancies_directory = os.path.join(directory, 'occupancies')
-        self.values_directory = os.path.join(directory, 'values')
+    def __init__(self, directory, game_flush_threshold=10):
+        self.game_flush_threshold = game_flush_threshold
 
-        for d in [self.children_visit_distribution_directory, self.occupancies_directory, self.values_directory]:
-            os.makedirs(d, exist_ok=True)
+        self.directory = directory
+        os.makedirs(directory, exist_ok=True)
 
-        if DEBUG_MODE:
-            self.states_directory = os.path.join(directory, 'states')
-            os.makedirs(self.states_directory, exist_ok=True)
-            self.states = []
+        # This object is a map from a randomly generated game ID to a dictionary of the form:
+        # {
+        #     "occupancies": [],
+        #     "policies": [],
+        #     "players": [],
+        #     "values": [],  (populated only if DEBUG MODE is true)
+        # }
+        self.games = {}
+        self.finished_games = set()
 
-        self.occupancies = []
-        self.children_visit_distributions = []
-        self.values = []
+    def start_game(self) -> int:
+        game_id = random.randint(0, (1<<31) - 1)
+        self.games[game_id] = {
+            "occupancies": [],
+            "policies": [],
+            "players": [],
+            "values": []
+        }
+        return game_id
 
-        # This is used to rotate the values correctly for each state when the game is over.
-        self.players_on_current_game = []
-
-    def record_rollout_result(self, state: State, children_visit_distribution: np.ndarray):
+    def record_rollout_result(self, game_id: int, state: State, policy: np.ndarray):
         """
         After each MCTS rollout completes, record the occupancy state did the rollout on and the final
         visit distribution of the children of that node.
         """
-        self.occupancies.append(
+        game = self.games[game_id]
+        game["occupancies"].append(
             player_pov_helpers.occupancies_to_player_pov(state.occupancies, state.player)
         )
-        self.children_visit_distributions.append(
-            player_pov_helpers.moves_array_to_player_pov(children_visit_distribution, state.player)
+        game["policies"].append(
+            player_pov_helpers.moves_array_to_player_pov(policy, state.player)
         )
-        self.players_on_current_game.append(state.player)
-
-        if DEBUG_MODE:
-            self.states.append(state.clone())
+        game["players"].append(state.player)
     
-    def record_game_end(self, values: np.ndarray):
-        for player in self.players_on_current_game:
-            self.values.append(player_pov_helpers.values_to_player_pov(values, player))
+    def record_game_end(self, game_id: int, values: np.ndarray):
+        game = self.games[game_id]
+        for player in game["players"]:
+            game["values"].append(player_pov_helpers.values_to_player_pov(values, player))
+        self.finished_games.add(game_id)
 
-        self.players_on_current_game = []
-        if len(self.occupancies) > BUFFER_LIMIT:
+        print("Finished a game!")
+
+        if len(self.finished_games) > self.game_flush_threshold:
             self.flush()
 
     def flush(self):
-        # Truncate the latest game, if it has not finished.
-        if len(self.values) < len(self.occupancies):
-            self.occupancies = self.occupancies[:len(self.values)]
-            self.children_visit_distributions = self.children_visit_distributions[:len(self.values)]
+        game_ids = []
+        occupancies = []
+        policies = []
+        values = []
 
-        if not self.occupancies:
+        for game_id in self.finished_games:
+            game = self.games[game_id]
+
+            occupancies.append(np.array(game["occupancies"]))
+            policies.append(np.array(game["policies"]))
+            values.append(np.array(game["values"]))
+            game_ids.append(game_id)
+
+            del self.games[game_id]
+        
+        self.finished_games = set()
+
+        if not game_ids:
+            print("No complete games recorded.")
             return
 
-        key = str(int(time.time() * 1000))
-        np.save(f"{self.occupancies_directory}/{key}.npy", np.array(self.occupancies))
-        np.save(f"{self.children_visit_distribution_directory}/{key}.npy", np.array(self.children_visit_distributions))
-        np.save(f"{self.values_directory}/{key}.npy", np.array(self.values))
-
-        self.occupancies = []
-        self.children_visit_distributions = []
-        self.values = []
-
-        if DEBUG_MODE:
-            with open(f"{self.states_directory}/{key}.pkl", "wb") as f:
-                pickle.dump(self.states, f)
-            self.states = []
+        np.savez(
+            os.path.join(self.directory, f"{int(time.time() * 1000)}.npz"),
+            game_ids=np.array(game_ids),
+            occupancies=np.concatenate(occupancies),
+            policies=np.concatenate(policies),
+            values=np.concatenate(values)
+        )

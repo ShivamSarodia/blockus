@@ -1,9 +1,11 @@
 import numpy as np
-import cProfile
+import pyinstrument
 import random
 from typing import Dict, NamedTuple
 from tqdm import tqdm
 import time
+import asyncio
+from multiprocessing import Pool
 
 import player_pov_helpers
 import neural_net
@@ -12,7 +14,8 @@ from state import State
 from display import Display
 from data_recorder import DataRecorder
 from neural_net import NeuralNet
-from multiprocessing import Pool
+from inference import InferenceEngine
+
 
 
 def softmax(x):
@@ -29,14 +32,15 @@ class Config(NamedTuple):
 
 
 class MCTSAgent:
-    def __init__(self, config: Config, model: NeuralNet, data_recorder: DataRecorder):
+    def __init__(self, config: Config, inference_engine: InferenceEngine, data_recorder: DataRecorder, recorder_game_id: int):
         self.config = config
-        self.model = model
+        self.inference_engine = inference_engine
         self.data_recorder = data_recorder
+        self.recorder_game_id = recorder_game_id
 
-    def select_move_index(self, state: State):
+    async def select_move_index(self, state: State):
         search_root = MCTSValuesNode(self.config)
-        search_root.get_value_and_expand_children(state, self.model)
+        await search_root.get_value_and_expand_children(state, self.inference_engine)
 
         for _ in range(self.config.num_mcts_rollouts):
             scratch_state = state.clone()
@@ -72,7 +76,7 @@ class MCTSAgent:
                 value = scratch_state.result()
             else:
                 new_node = MCTSValuesNode(self.config)
-                value = new_node.get_value_and_expand_children(scratch_state, self.model)
+                value = await new_node.get_value_and_expand_children(scratch_state, self.inference_engine)
                 nodes_visited[-1].move_index_to_child_node[moves_played[-1]] = new_node
 
             # Now, backpropagate the value up the visited notes.
@@ -82,6 +86,7 @@ class MCTSAgent:
 
         # Record the search tree result.
         self.data_recorder.record_rollout_result(
+            self.recorder_game_id,
             state,
             search_root.children_visit_counts / np.sum(search_root.children_visit_counts),
         )
@@ -130,7 +135,7 @@ class MCTSValuesNode:
         move_index_selected = np.argmax(ucb_scores)
         return move_index_selected
 
-    def get_value_and_expand_children(self, state: State, model: NeuralNet):
+    async def get_value_and_expand_children(self, state: State, inference_engine: InferenceEngine):
         """
         Populate the children arrays by calling the NN, and return
         the value of the current state.
@@ -138,7 +143,7 @@ class MCTSValuesNode:
         # TODO: This is supposed to be input to the NN.
         player_pov_occupancies = player_pov_helpers.occupancies_to_player_pov(state.occupancies, state.player)
 
-        player_pov_values, player_pov_children_prior_logits = neural_net.evaluate(model, player_pov_occupancies, "mps")
+        player_pov_values, player_pov_children_prior_logits = await inference_engine.evaluate(player_pov_occupancies)
 
         # Rotate the player POV values and policy back to the original player's perspective.
         universal_values = player_pov_helpers.values_to_player_pov(player_pov_values, -state.player)
@@ -167,11 +172,11 @@ class MCTSValuesNode:
 
 
 class RandomAgent:
-    def select_move_index(self, state: State):
-        return state.select_random_valid_move_index()  
+    async def select_move_index(self, state: State):
+        return state.select_random_valid_move_index()
 
 
-def play_game(model: NeuralNet, data_recorder: DataRecorder):
+async def play_game(inference_engine: InferenceEngine, data_recorder: DataRecorder):
     config = Config(
         num_mcts_rollouts=500,
         # Reasonable guess at an exploration parameter I guess?
@@ -183,33 +188,58 @@ def play_game(model: NeuralNet, data_recorder: DataRecorder):
         root_exploration_fraction=0.25
     )
 
+    recorder_game_id = data_recorder.start_game()
+
     agents = [
-        MCTSAgent(config, model, data_recorder),
-        MCTSAgent(config, model, data_recorder),
-        MCTSAgent(config, model, data_recorder),
-        MCTSAgent(config, model, data_recorder),
+        MCTSAgent(config, inference_engine, data_recorder, recorder_game_id),
+        MCTSAgent(config, inference_engine, data_recorder, recorder_game_id),
+        MCTSAgent(config, inference_engine, data_recorder, recorder_game_id),
+        MCTSAgent(config, inference_engine, data_recorder, recorder_game_id),
     ]
 
     game_over = False
     state = State()
     while not game_over:
         agent = agents[state.player]
-        move_index = agent.select_move_index(state)
+        move_index = await agent.select_move_index(state)
         game_over = state.play_move(move_index)
 
-    data_recorder.record_game_end(state.result())
+    data_recorder.record_game_end(recorder_game_id, state.result())
 
-PROCESSES = 2
+
+async def continuously_play_games(inference_engine, data_recorder):
+    while True:
+        print("Playing game...")
+        start = time.time()
+        await play_game(inference_engine, data_recorder)
+        print(f"Game finished in {time.time() - start:.2f}s")
+
+
+async def multi_continuously_play_games(num_coroutines, inference_engine, data_recorder):
+    await asyncio.gather(
+        *[continuously_play_games(inference_engine, data_recorder) for _ in range(num_coroutines)]
+    )
+
 
 def run(output_data_dir):
     data_recorder = DataRecorder(output_data_dir)
-    model = NeuralNet().to("mps")
+    inference_engine = InferenceEngine(
+        model=NeuralNet(),
+        device="mps",
+        batch_size=10,
+        batch_timeout=1,
+    )
+
+    p = pyinstrument.Profiler(async_mode="enabled")
+    p.start()
+
+    inference_engine.start_processing()
+
+    loop = asyncio.get_event_loop()
     try:
-        while True:
-            print("Playing game...")
-            start = time.time()
-            play_game(model, data_recorder)
-            print(f"Game finished in {time.time() - start:.2f}s")
+        loop.run_until_complete(multi_continuously_play_games(20, inference_engine, data_recorder))
     except:
         data_recorder.flush()
+        p.stop()
+        p.open_in_browser()
         raise
