@@ -1,5 +1,7 @@
 import numpy as np 
-from constants import MOVES
+from config import moves_data
+
+MOVES = moves_data()
 
 # A negative value in these methods moves from that player's POV 
 # back to universal POV.

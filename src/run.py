@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 
 def main():
     # Create the top-level parser
@@ -15,9 +16,8 @@ def main():
 
     # Subparser for 'simulate'
     parser_simulate = subparsers.add_parser('simulate', help='Run self-play sessions')
-    parser_simulate.add_argument('--moves_dir', type=str, required=True)
+    parser_simulate.add_argument('--config', type=str, required=True)
     parser_simulate.add_argument('--output_dir', type=str, required=True)
-    parser_simulate.add_argument('--debug_mode', action='store_true')    
 
     # Subparser for 'train'
     parser_train = subparsers.add_parser('train', help='Train neural network')
@@ -36,12 +36,13 @@ def main():
 
 
     elif args.command == 'simulate':
-        # Load constants before everything else, since other packages 
-        # expect these constants to be available at import-time.
-        import constants 
-        constants.load(args.moves_dir, args.debug_mode)
+        # Bit hacky, but we store the config path in an environment variable so
+        # that this process and all children processes can access it as needed to
+        # load the config.
+        os.environ["CONFIG_PATH"] = args.config
 
-        if args.debug_mode:
+        from config import config 
+        if config()["debug_mode"]:
             logging.basicConfig(
                 level=logging.DEBUG,
                 format="%(asctime)s,%(msecs)d %(levelname)s: %(message)s",
@@ -53,8 +54,8 @@ def main():
 
 
     elif args.command == 'train':
-        import constants 
-        constants.load(args.moves_dir, False)
+        import config as config 
+        config.load(args.moves_dir, False)
 
         import training
         training.run(args.games_dir, args.output_dir)

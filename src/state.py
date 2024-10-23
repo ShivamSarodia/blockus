@@ -1,8 +1,14 @@
 import numpy as np
 import functools
 
-from constants import MOVES, NUM_MOVES, BOARD_SIZE, DEBUG_MODE
+from config import config, moves_data
 from display import Display
+
+
+MOVES = moves_data()
+NUM_MOVES = config()["game"]["num_moves"]
+BOARD_SIZE = config()["game"]["board_size"]
+DEBUG_MODE = config()["debug_mode"]
 
 
 class State:

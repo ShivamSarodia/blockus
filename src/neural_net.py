@@ -11,21 +11,16 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from constants import BOARD_SIZE, NUM_MOVES
+from config import config
 
-# This is the original network.
-# MAIN_BODY_CHANNELS = 256
-# VALUE_HEAD_CHANNELS = 8
-# VALUE_HEAD_FLAT_LAYER_WIDTH = 256
-# POLICY_HEAD_CHANNELS = 256
-# RESIDUAL_BLOCKS = 19
+MAIN_BODY_CHANNELS = config()["network"]["main_body_channels"]
+VALUE_HEAD_CHANNELS = config()["network"]["value_head_channels"]
+VALUE_HEAD_FLAT_LAYER_WIDTH = config()["network"]["value_head_flat_layer_width"]
+POLICY_HEAD_CHANNELS = config()["network"]["policy_head_channels"]
+RESIDUAL_BLOCKS = config()["network"]["residual_blocks"]
 
-# Define some network architecture parameters
-MAIN_BODY_CHANNELS = 128
-VALUE_HEAD_CHANNELS = 32
-VALUE_HEAD_FLAT_LAYER_WIDTH = 128
-POLICY_HEAD_CHANNELS = 128
-RESIDUAL_BLOCKS = 19
+BOARD_SIZE = config()["game"]["board_size"]
+NUM_MOVES = config()["game"]["num_moves"]
 
 class Debug(nn.Module):
     def __init__(self, label: str):

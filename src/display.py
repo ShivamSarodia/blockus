@@ -1,7 +1,9 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from constants import BOARD_SIZE
+from config import config
+
+BOARD_SIZE = config()["game"]["board_size"]
 
 class Display:
     def __init__(self, occupancies, overlay_dots=None):
