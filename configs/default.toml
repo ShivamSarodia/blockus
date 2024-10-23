@@ -12,6 +12,15 @@ value_head_flat_layer_width = 128
 policy_head_channels = 128
 residual_blocks = 19
 
+[inference]
+maximum_batch_size = 10
+
+[architecture]
+coroutines_per_process = 20
+gameplay_processes = 1
+evaluation_engines_on_gpu = 0
+evaluation_engines_on_cpu = 1
+
 [mcts]
 num_rollouts = 500
 # Very haphazard guess at an exploration parameter.

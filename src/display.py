@@ -1,7 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from config import config
+from configuration import config
 
 BOARD_SIZE = config()["game"]["board_size"]
 

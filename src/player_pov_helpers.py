@@ -1,5 +1,5 @@
 import numpy as np 
-from config import moves_data
+from configuration import moves_data
 
 MOVES = moves_data()
 

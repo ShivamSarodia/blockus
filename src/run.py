@@ -41,7 +41,7 @@ def main():
         # load the config.
         os.environ["CONFIG_PATH"] = args.config
 
-        from config import config 
+        from configuration import config 
         if config()["debug_mode"]:
             logging.basicConfig(
                 level=logging.DEBUG,

@@ -3,7 +3,7 @@ import torch
 from typing import Tuple
 import numpy as np
 
-from config import config 
+from configuration import config 
 
 BOARD_SIZE = config()["game"]["board_size"]
 DEBUG_MODE = config()["debug_mode"]

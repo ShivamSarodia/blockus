@@ -1,7 +1,7 @@
 import numpy as np
 import functools
 
-from config import config, moves_data
+from configuration import config, moves_data
 from display import Display
 
 
