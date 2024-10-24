@@ -68,8 +68,9 @@ def run(output_data_dir):
     # We need one request queue for storing all evaluation requests.
     # The capacity of this queue should be enough to store all requests that could be made at once,
     # which is the number of coroutines per process times the number of gameplay processes. We multiply
-    # by ten to ensure we don't run into any issues with the queue being full.
-    request_queue_capacity = COROUTINES_PER_PROCESS * GAMEPLAY_PROCESSES * 10
+    # by two to ensure we don't run into any issues with the queue being full, although that shouldn't 
+    # actually happen.
+    request_queue_capacity = COROUTINES_PER_PROCESS * GAMEPLAY_PROCESSES * 2
     request_queue_item_likes = [
         np.empty((4, BOARD_SIZE, BOARD_SIZE), dtype=bool),
         np.empty((), dtype=int),
@@ -79,9 +80,9 @@ def run(output_data_dir):
 
     # We need one output queue for each process that's doing evaluations. The capacity of each queue should be
     # enough to store all the results that could be produced by the process before they are read. We multiply
-    # by ten for the same reason as above.
+    # by two for the same reason as above.
     output_queues_map = {
-        process_id: ArrayQueue(COROUTINES_PER_PROCESS * 10, [
+        process_id: ArrayQueue(COROUTINES_PER_PROCESS * 2, [
             # Values
             np.empty((4,), dtype=float),
             # Policies

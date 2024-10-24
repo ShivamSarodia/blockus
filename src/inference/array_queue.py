@@ -31,7 +31,7 @@ class ArrayQueue:
         """
         Put an item into the queue.
         """
-        self.queue.put(self._to_torch(items))
+        self.queue.put_nowait(self._to_torch(items))
 
     def get_many_nowait(self, max_count):
         """
