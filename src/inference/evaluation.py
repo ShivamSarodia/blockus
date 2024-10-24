@@ -1,6 +1,7 @@
 import random
 import time
 import torch
+import numpy as np
 import os
 from typing import Dict
 import pyinstrument
@@ -49,9 +50,9 @@ class EvaluationEngine:
         try:
             while True:
                 # Get a batch of tasks.
-                player_pov_occupancy_batch, evaluation_ids, process_ids = self.input_queue.get_many_nowait(self.maximum_batch_size)
+                results = self.input_queue.get_many_nowait(self.maximum_batch_size)
 
-                batch_size = len(player_pov_occupancy_batch)
+                batch_size = len(results)
                 if batch_size == 0:
                     # Sleep for up to 10ms before trying again.
                     time.sleep(random.random() * 10e-3)
@@ -61,13 +62,13 @@ class EvaluationEngine:
                 self.batch_size_count += 1
                 
                 # Evaluate the batch to get values and policies.
-                values, policies = self._evaluate_batch(player_pov_occupancy_batch)
+                values, policies = self._evaluate_batch(np.stack([result[0] for result in results]))
                 
                 # Put the results in the corresponding output queue.
-                for value, policy, evaluation_id, process_id in zip(values, policies, evaluation_ids, process_ids):
+                for value, policy, result in zip(values, policies, results):
                     # k = random.getrandbits(30)
                     # print(f"{time.time(), os.getpid(), int(k)}: Putting in queue start", flush=True)
-                    self.output_queue_map[int(process_id)].put(value, policy, int(evaluation_id))
+                    self.output_queue_map[int(result[2])].put(value, policy, int(result[1]))
                     # print(f"{time.time(), os.getpid(), int(k)}: Putting in queue end", flush=True)
         finally:
             print(f"Average batch size on device {self.device}: {self.batch_size_sum / self.batch_size_count}")
