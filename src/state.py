@@ -8,7 +8,7 @@ from display import Display
 MOVES = moves_data()
 NUM_MOVES = config()["game"]["num_moves"]
 BOARD_SIZE = config()["game"]["board_size"]
-DEBUG_MODE = config()["debug_mode"]
+DEBUG_MODE = config()["development"]["debug_mode"]
 
 
 class State:
@@ -38,7 +38,7 @@ class State:
     @staticmethod
     @functools.cache
     def _get_initial_moves_enabled():
-        print("Computing initial moves enabled... (should happen only once)")
+        print("Computing initial moves enabled...")
 
         # Precompute some initial values of the self.moves_enabled array for a state.
         start_corners = np.zeros((4, BOARD_SIZE, BOARD_SIZE), dtype=bool)

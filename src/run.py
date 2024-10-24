@@ -42,7 +42,7 @@ def main():
         os.environ["CONFIG_PATH"] = args.config
 
         from configuration import config 
-        if config()["debug_mode"]:
+        if config()["development"]["debug_mode"]:
             logging.basicConfig(
                 level=logging.DEBUG,
                 format="%(asctime)s,%(msecs)d %(levelname)s: %(message)s",

@@ -6,7 +6,7 @@ import numpy as np
 from configuration import config 
 
 BOARD_SIZE = config()["game"]["board_size"]
-DEBUG_MODE = config()["debug_mode"]
+DEBUG_MODE = config()["development"]["debug_mode"]
 
 class InferenceEngine:
     def __init__(

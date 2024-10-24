@@ -1,11 +1,12 @@
 import numpy as np
 import random
-import logging
 from typing import Dict, NamedTuple
 from tqdm import tqdm
 import time
 import asyncio
+import uvloop
 import multiprocessing
+import pyinstrument
 from multiprocessing import shared_memory
 
 from configuration import config
@@ -19,6 +20,7 @@ from state import State
 
 BOARD_SIZE = config()["game"]["board_size"]
 NUM_MOVES = config()["game"]["num_moves"]
+PROFILER_DIRECTORY = config()["development"]["profiler_directory"]
 COROUTINES_PER_PROCESS = config()["architecture"]["coroutines_per_process"]
 GAMEPLAY_PROCESSES = config()["architecture"]["gameplay_processes"]
 EVALUATION_ENGINES_ON_GPU = config()["architecture"]["evaluation_engines_on_gpu"]
@@ -66,10 +68,8 @@ def run(output_data_dir):
     # We need one request queue for storing all evaluation requests.
     # The capacity of this queue should be enough to store all requests that could be made at once,
     # which is the number of coroutines per process times the number of gameplay processes. We multiply
-    # by two to ensure we don't run into any issues with the queue being full; in particular, the implementation
-    # of my ArrayQueue only frees a memory slot after it has been read so we may have some delay before a slot
-    # that was read is freed.
-    request_queue_capacity = COROUTINES_PER_PROCESS * GAMEPLAY_PROCESSES * 2
+    # by ten to ensure we don't run into any issues with the queue being full.
+    request_queue_capacity = COROUTINES_PER_PROCESS * GAMEPLAY_PROCESSES * 10
     request_queue_item_likes = [
         np.empty((4, BOARD_SIZE, BOARD_SIZE), dtype=bool),
         np.empty((), dtype=int),
@@ -79,9 +79,9 @@ def run(output_data_dir):
 
     # We need one output queue for each process that's doing evaluations. The capacity of each queue should be
     # enough to store all the results that could be produced by the process before they are read. We multiply
-    # by two for the same reason as above.
+    # by ten for the same reason as above.
     output_queues_map = {
-        process_id: ArrayQueue(COROUTINES_PER_PROCESS * 2, [
+        process_id: ArrayQueue(COROUTINES_PER_PROCESS * 10, [
             # Values
             np.empty((4,), dtype=float),
             # Policies
@@ -93,33 +93,44 @@ def run(output_data_dir):
     }
 
     # Now, start all our processes.
-    for _ in range(EVALUATION_ENGINES_ON_GPU):
+    for i in range(EVALUATION_ENGINES_ON_GPU):
         evaluation_engine = EvaluationEngine(NeuralNet(), "mps", request_queue, output_queues_map)
-        p = multiprocessing.Process(target=evaluation_engine.run)
+        p = multiprocessing.Process(target=evaluation_engine.run, name=f"evaluation_engine_gpu_{i}")
         p.start()
 
     # TODO: Be more DRY.
-    for _ in range(EVALUATION_ENGINERS_ON_CPU):
+    for i in range(EVALUATION_ENGINERS_ON_CPU):
         evaluation_engine = EvaluationEngine(NeuralNet(), "cpu", request_queue, output_queues_map)
-        p = multiprocessing.Process(target=evaluation_engine.run)
+        p = multiprocessing.Process(target=evaluation_engine.run, name=f"evaluation_engine_cpu_{i}")
         p.start()
 
     for process_id in range(GAMEPLAY_PROCESSES):
         inference_interface = InferenceInterface(process_id, request_queue, output_queues_map[process_id])
-        p = multiprocessing.Process(target=_run_gameplay_process, args=(output_data_dir, inference_interface))
+        p = multiprocessing.Process(target=_run_gameplay_process, args=(output_data_dir, inference_interface), name=f"gameplay_{process_id}")
         p.start()
 
     # Join one of the gameplay processes so this lives forever.
-    p.join()
+    try:
+        p.join()
+    finally:
+        print("Cleaning up shared memory.")
+        request_queue.cleanup()
+        for output_queue in output_queues_map.values():
+            output_queue.cleanup()
 
 def _run_gameplay_process(output_data_dir, inference_interface: InferenceInterface):
     print("Running gameplay process...")
 
-    data_recorder = DataRecorder(output_data_dir)
-    inference_interface.init_in_process()
+    loop = uvloop.new_event_loop()
+    asyncio.set_event_loop(loop)
 
-    loop = asyncio.get_event_loop()
+    data_recorder = DataRecorder(output_data_dir)
+    inference_interface.init_in_process(loop)
+
     try:
+        if PROFILER_DIRECTORY:
+            profiler = pyinstrument.Profiler()
+            profiler.start()
         loop.run_until_complete(multi_continuously_play_games(
             COROUTINES_PER_PROCESS,
             inference_interface,
@@ -127,4 +138,8 @@ def _run_gameplay_process(output_data_dir, inference_interface: InferenceInterfa
         ))
     except:
         data_recorder.flush()
+        profiler.stop()
+        profiler.write_html(
+            f"{PROFILER_DIRECTORY}/{int(time.time() * 1000)}_gameplay.html",
+        )
         raise

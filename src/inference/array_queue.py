@@ -3,11 +3,13 @@ from typing import List
 import numpy as np
 import multiprocessing
 import queue
+import time
 
 class ArrayQueue:
-    def __init__(self, capacity: int, items_like: List[np.ndarray]):
+    def __init__(self, capacity: int, items_like: List[np.ndarray], debug=False):
         self.capacity = capacity
         self.items_like = items_like
+        self.debug = debug
 
         self.shms = []
         for item in items_like:
@@ -37,7 +39,11 @@ class ArrayQueue:
         ]
 
     def put(self, *items):
-        index = self.unused_indices.get_nowait()
+        try:
+            # TODO: For some unknown reason, this is raising.
+            index = self.unused_indices.get_nowait()
+        except queue.Empty:
+            raise ValueError("No more space in the queue.") from None
 
         for array, item in zip(self.arrays, items):
             array[index] = item
@@ -77,6 +83,8 @@ class ArrayQueue:
         # We only add the indices back to the unused_indices queue after we've read the 
         # data out of the arrays to ensure nobody else overwrites it first.
         self.unused_indices.put_nowait(index)
+        if self.debug:
+            print(f"{time.time()}: Returned index to unused:", index)
         return result
     
     def cleanup(self):
