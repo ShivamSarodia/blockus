@@ -1,7 +1,6 @@
 [development]
 debug_mode = true
 profiler_directory = "data/profiler"
-# profiler_directory = ""
 
 [game]
 board_size = 10
@@ -16,14 +15,14 @@ policy_head_channels = 128
 residual_blocks = 19
 
 [inference]
-maximum_batch_size_on_gpu = 40
+maximum_batch_size_on_gpu = 500
 maximum_batch_size_on_cpu = 5
 
 [architecture]
-coroutines_per_process = 40
+coroutines_per_process = 200
 gameplay_processes = 2
 evaluation_engines_on_gpu = 1
-evaluation_engines_on_cpu = 1
+evaluation_engines_on_cpu = 0
 
 [mcts]
 num_rollouts = 500

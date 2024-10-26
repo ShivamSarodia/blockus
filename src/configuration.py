@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import tomllib
+import neptune as neptune_module
 
 _CONFIG = None
 _MOVES = None

@@ -70,14 +70,23 @@ class MCTSAgent:
 
             # Now, backpropagate the value up the visited notes.
             for i in range(len(nodes_visited)):
-                nodes_visited[i].children_value_sums[:,moves_played[i]] += value 
-                nodes_visited[i].children_visit_counts[moves_played[i]] += 1
+                node = nodes_visited[i]
+                node_array_index = node.move_index_to_array_index[moves_played[i]]
+                node.children_value_sums[:,node_array_index] += value 
+                node.children_visit_counts[node_array_index] += 1
 
         # Record the search tree result.
+        # If we need to save memory, we can just save the `search_root.array_index_to_move_index` and 
+        # `search_root.children_visit_counts` arrays, and compute the full policy (of length NUM_MOVES)
+        # when writing to disk.
+        policy = np.zeros((NUM_MOVES,))
+        policy[search_root.array_index_to_move_index] = (
+            search_root.children_visit_counts / np.sum(search_root.children_visit_counts)
+        )
         self.data_recorder.record_rollout_result(
             self.recorder_game_id,
             state,
-            search_root.children_visit_counts / np.sum(search_root.children_visit_counts),
+            policy,
         )
 
         # Select the move to play now.
@@ -86,13 +95,22 @@ class MCTSAgent:
 
 class MCTSValuesNode:
     def __init__(self):
-        # All of these below can be rewritten in terms of num *valid* moves to save a lot
-        # of memory if needed.
-        #
-        # They are populated when get_value_and_expand_children is called.
-        self.children_value_sums = None      # Shape (4, NUM_MOVES)
-        self.children_visit_counts = None    # Shape (NUM_MOVES,)
-        self.children_priors = None          # Shape (NUM_MOVES,)
+        # These values are all populated when get_value_and_expand_children is called.
+        self.num_valid_moves = None
+
+        # Shape (NUM_VALID_MOVES,)
+        # Usage: self.children_value_sums[self.move_index_to_array_index[move_index]] -> value sum for move_index
+        self.move_index_to_array_index: Dict[int, int] = None
+
+        # Shape (NUM_VALID_MOVES,)
+        # Usage:
+        #   array_index = np.argmax(self.children_value_sums)
+        #   self.array_index_to_move_index[array_index] -> move_index associated with the array index
+        self.array_index_to_move_index = None
+    
+        self.children_value_sums = None         # Shape (4, NUM_VALID_MOVES)
+        self.children_visit_counts = None       # Shape (NUM_VALID_MOVES,)
+        self.children_priors = None             # Shape (NUM_VALID_MOVES,)
 
         # This populates over time only as nodes are visited.
         self.move_index_to_child_node: Dict[int, MCTSValuesNode] = {}
@@ -103,11 +121,11 @@ class MCTSValuesNode:
         exploitation_scores = np.divide(
             self.children_value_sums[state.player],
             self.children_visit_counts,
-            # Where there's no visit count, use a default value. This value isn't 0 because that's "not fair",
-            # given random play there's some non-zero expected value so let's use that instead.
-            out=np.ones_like(self.children_value_sums[state.player]) * UCB_DEFAULT_CHILD_VALUE,
             where=(self.children_visit_counts != 0)
         )
+        # Where there's no visit count, use a default value. This value isn't 0 because that's "not fair",
+        # given random play there's some non-zero expected value so let's use that instead.
+        exploitation_scores[self.children_visit_counts == 0] = UCB_DEFAULT_CHILD_VALUE
 
         # Followed this: https://aaowens.github.io/blog_mcts.html
         sqrt_total_visit_count = np.sqrt(np.sum(self.children_visit_counts) + 1)
@@ -117,9 +135,8 @@ class MCTSValuesNode:
             UCB_EXPLORATION * self.children_priors * sqrt_total_visit_count / (1 + self.children_visit_counts)
         )
         ucb_scores = exploitation_scores + exploration_scores
-        ucb_scores[~state.valid_moves_array()] = -np.inf
 
-        move_index_selected = np.argmax(ucb_scores)
+        move_index_selected = self.array_index_to_move_index[np.argmax(ucb_scores)]
         return move_index_selected
 
     async def get_value_and_expand_children(self, state: State, inference_interface: InferenceInterface):
@@ -127,7 +144,16 @@ class MCTSValuesNode:
         Populate the children arrays by calling the NN, and return
         the value of the current state.
         """
-        # TODO: This is supposed to be input to the NN.
+        valid_moves = state.valid_moves_array()
+
+        # Set up the mapping between move indices and array indices.
+        self.array_index_to_move_index = np.flatnonzero(valid_moves)
+        self.move_index_to_array_index = {
+            move_index: array_index
+            for array_index, move_index in enumerate(self.array_index_to_move_index)
+        }
+        self.num_valid_moves = len(self.array_index_to_move_index)
+
         player_pov_occupancies = player_pov_helpers.occupancies_to_player_pov(state.occupancies, state.player)
 
         player_pov_values, player_pov_children_prior_logits = await inference_interface.evaluate(player_pov_occupancies)
@@ -136,22 +162,19 @@ class MCTSValuesNode:
         universal_values = player_pov_helpers.values_to_player_pov(player_pov_values, -state.player)
         universal_children_prior_logits = player_pov_helpers.moves_array_to_player_pov(player_pov_children_prior_logits, -state.player)
 
-        # Softmax the children priors while excluding invalid moves.
-        universal_children_priors = np.zeros((NUM_MOVES,), dtype=float)
-        valid_moves = state.valid_moves_array()
-        universal_children_priors[valid_moves] = softmax(universal_children_prior_logits[valid_moves])
+        # Exclude invalid moves and take the softmax.
+        universal_children_priors = softmax(universal_children_prior_logits[valid_moves])
 
-        self.children_value_sums = np.zeros((4, NUM_MOVES), dtype=float)
-        self.children_visit_counts = np.zeros(NUM_MOVES, dtype=int)
+        self.children_value_sums = np.zeros((4, self.num_valid_moves), dtype=float)
+        self.children_visit_counts = np.zeros(self.num_valid_moves, dtype=int)
         self.children_priors = universal_children_priors
         return universal_values
 
     def get_move_index_to_play(self, state: State):
         probabilities = softmax(self.children_visit_counts)
-        probabilities *= state.valid_moves_array()
         probabilities /= np.sum(probabilities)
 
-        return np.random.choice(len(probabilities), p=probabilities)
+        return self.array_index_to_move_index[np.random.choice(len(probabilities), p=probabilities)]
     
     def add_noise(self):
         self.children_priors = (1 - ROOT_EXPLORATION_FRACTION) * self.children_priors + \

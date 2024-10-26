@@ -75,7 +75,7 @@ class EvaluationEngine:
             if PROFILER_DIRECTORY:
                 profiler.stop()
                 profiler.write_html(
-                    f"{PROFILER_DIRECTORY}/{int(time.time() * 1000)}_evaluation_engine_{self.device}.html",
+                    f"{PROFILER_DIRECTORY}/{int(time.time() * 1000)}_{random.getrandbits(30)}_evaluation_engine_{self.device}.html",
                 )
 
     def _evaluate_batch(self, player_pov_occupancy_batch):

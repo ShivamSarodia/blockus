@@ -51,7 +51,10 @@ class InferenceInterface:
     def _background_thread(self):
         while True:
             value, policy, evaluation_id = self.output_queue.get()
-            # print(f"{time.time(), os.getpid()}: Got from queue", flush=True)
             evaluation_id = int(evaluation_id)
-            future = self.futures[evaluation_id]
+            try:
+                future = self.futures[evaluation_id]
+            except KeyError:
+                print(f"WARNING: Received a result with ID {evaluation_id} that doesn't exist in the futures map.")
+                continue
             self.loop.call_soon_threadsafe(future.set_result, (value, policy))
