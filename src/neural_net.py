@@ -65,7 +65,7 @@ class NeuralNet(nn.Module):
             nn.ReLU(),
             nn.Flatten(),
             nn.Linear(VALUE_HEAD_CHANNELS * BOARD_SIZE * BOARD_SIZE, VALUE_HEAD_FLAT_LAYER_WIDTH),
-            nn.ReLU(),
+            nn.ReLU(), 
             nn.Linear(VALUE_HEAD_FLAT_LAYER_WIDTH, 4),
         )
         self.policy_head = nn.Sequential(

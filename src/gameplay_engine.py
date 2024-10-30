@@ -23,23 +23,18 @@ class GameplayEngine:
     def run(self):
         print("Running gameplay process...")
 
-        loop = uvloop.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-        self.inference_interface.init_in_process(loop)
-
         try:
             if PROFILER_DIRECTORY:
-                profiler = pyinstrument.Profiler()
+                profiler = pyinstrument.Profiler(async_mode="enabled")
                 profiler.start()
-            loop.run_until_complete(self.multi_continuously_play_games(COROUTINES_PER_PROCESS))
+            uvloop.run(self.multi_continuously_play_games(COROUTINES_PER_PROCESS))
         except:
             self.data_recorder.flush()
             if PROFILER_DIRECTORY:
                 profiler.stop()
-                profiler.write_html(
-                    f"{PROFILER_DIRECTORY}/{int(time.time() * 1000)}_{random.getrandbits(30)}_gameplay.html",
-                )
+                path = f"{PROFILER_DIRECTORY}/{int(time.time() * 1000)}_{random.getrandbits(30)}_gameplay.html"
+                print(f"Writing profiler info to path: {path}")
+                profiler.write_html(path)
             raise
 
     async def play_game(self):
@@ -72,6 +67,9 @@ class GameplayEngine:
 
 
     async def multi_continuously_play_games(self, num_coroutines: int):
+        # We need to call this in here so that uvloop has had a chance to set the event loop first.
+        self.inference_interface.init_in_process(asyncio.get_event_loop())
+
         await asyncio.gather(
             *[self.continuously_play_games() for _ in range(num_coroutines)]
         )

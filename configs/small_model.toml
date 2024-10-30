@@ -1,6 +1,7 @@
 [development]
 debug_mode = true
 profiler_directory = "data/profiler"
+# profiler_directory = ""
 
 [game]
 board_size = 10
@@ -8,18 +9,18 @@ num_moves = 6233
 moves_directory = "data/moves_10/"
 
 [network]
-main_body_channels = 128
-value_head_channels = 32
-value_head_flat_layer_width = 128
-policy_head_channels = 128
-residual_blocks = 19
+main_body_channels = 64
+value_head_channels = 16
+value_head_flat_layer_width = 64
+policy_head_channels = 64
+residual_blocks = 8
 
 [inference]
 maximum_batch_size_on_gpu = 500
 maximum_batch_size_on_cpu = 5
 
 [architecture]
-coroutines_per_process = 200
+coroutines_per_process = 280
 gameplay_processes = 2
 evaluation_engines_on_gpu = 1
 evaluation_engines_on_cpu = 0

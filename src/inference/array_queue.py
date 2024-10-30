@@ -10,13 +10,24 @@ class ArrayQueue:
         self.capacity = capacity
         self.items_like = items_like
 
+        # Compute the length we expect the torch tensor to be, so we can 
+        # be sure we're putting well-formatted values into our queue.
+        self.expected_torch_length = 0
+        for item_like in self.items_like:
+            expected_item_length = 1
+            for dim in item_like.shape:
+                expected_item_length *= dim
+            self.expected_torch_length += expected_item_length
+
         self.queue = torch.multiprocessing.Queue(capacity)
 
     def init_in_process(self):
         pass
 
     def _to_torch(self, items):
-        return torch.from_numpy(np.concatenate([np.array(item).flatten() for item in items]))
+        result = torch.from_numpy(np.concatenate([np.array(item).flatten() for item in items]))
+        assert result.shape[0] == self.expected_torch_length
+        return result
     
     def _from_torch(self, tensor):
         result = []

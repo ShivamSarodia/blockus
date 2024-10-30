@@ -1,0 +1,36 @@
+[development]
+debug_mode = true
+profiler_directory = "data/profiler"
+# profiler_directory = ""
+
+[game]
+board_size = 10
+num_moves = 6233
+moves_directory = "data/moves_10/"
+
+[network]
+main_body_channels = 128
+value_head_channels = 32
+value_head_flat_layer_width = 128
+policy_head_channels = 128
+residual_blocks = 19
+
+[inference]
+maximum_batch_size_on_gpu = 500
+maximum_batch_size_on_cpu = 5
+
+[architecture]
+coroutines_per_process = 280
+gameplay_processes = 2
+evaluation_engines_on_gpu = 1
+evaluation_engines_on_cpu = 0
+
+[mcts]
+num_rollouts = 500
+# Very haphazard guess at an exploration parameter.
+ucb_exploration = 1.4
+# This is 0.25, because we assume that for an unexpanded child there's a 1/4 
+# chance of winning from it.
+ucb_default_child_value = 0.25
+root_dirichlet_alpha = 0.03
+root_exploration_fraction = 0.25
