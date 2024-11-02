@@ -5,7 +5,7 @@ from configuration import config
 from state import State
 import player_pov_helpers
 from data_recorder import DataRecorder
-from inference.interface import InferenceInterface
+from inference.client import InferenceClient
 
 
 NUM_MOVES = config()["game"]["num_moves"]
@@ -22,14 +22,14 @@ def softmax(x):
 
 
 class MCTSAgent:
-    def __init__(self, inference_interface: InferenceInterface, data_recorder: DataRecorder, recorder_game_id: int):
-        self.inference_interface = inference_interface
+    def __init__(self, inference_client: InferenceClient, data_recorder: DataRecorder, recorder_game_id: int):
+        self.inference_client = inference_client
         self.data_recorder = data_recorder
         self.recorder_game_id = recorder_game_id
 
     async def select_move_index(self, state: State):
         search_root = MCTSValuesNode()
-        await search_root.get_value_and_expand_children(state, self.inference_interface)
+        await search_root.get_value_and_expand_children(state, self.inference_client)
 
         for _ in range(NUM_MCTS_ROLLOUTS):
             scratch_state = state.clone()
@@ -65,7 +65,7 @@ class MCTSAgent:
                 value = scratch_state.result()
             else:
                 new_node = MCTSValuesNode()
-                value = await new_node.get_value_and_expand_children(scratch_state, self.inference_interface)
+                value = await new_node.get_value_and_expand_children(scratch_state, self.inference_client)
                 nodes_visited[-1].move_index_to_child_node[moves_played[-1]] = new_node
 
             # Now, backpropagate the value up the visited notes.
@@ -139,7 +139,7 @@ class MCTSValuesNode:
         move_index_selected = self.array_index_to_move_index[np.argmax(ucb_scores)]
         return move_index_selected
 
-    async def get_value_and_expand_children(self, state: State, inference_interface: InferenceInterface):
+    async def get_value_and_expand_children(self, state: State, inference_client: InferenceClient):
         """
         Populate the children arrays by calling the NN, and return
         the value of the current state.
@@ -156,7 +156,7 @@ class MCTSValuesNode:
 
         player_pov_occupancies = player_pov_helpers.occupancies_to_player_pov(state.occupancies, state.player)
 
-        player_pov_values, player_pov_children_prior_logits = await inference_interface.evaluate(player_pov_occupancies)
+        player_pov_values, player_pov_children_prior_logits = await inference_client.evaluate(player_pov_occupancies)
 
         # Rotate the player POV values and policy back to the original player's perspective.
         universal_values = player_pov_helpers.values_to_player_pov(player_pov_values, -state.player)

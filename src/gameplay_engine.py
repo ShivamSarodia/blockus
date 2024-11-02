@@ -6,7 +6,7 @@ import pyinstrument
 
 from configuration import config
 from data_recorder import DataRecorder
-from inference.interface import InferenceInterface
+from inference.client import InferenceClient
 from mcts import MCTSAgent
 from state import State
 
@@ -16,8 +16,8 @@ COROUTINES_PER_PROCESS = config()["architecture"]["coroutines_per_process"]
 
 
 class GameplayEngine:
-    def __init__(self, inference_interface: InferenceInterface, output_data_dir: str):
-        self.inference_interface = inference_interface
+    def __init__(self, inference_client: InferenceClient, output_data_dir: str):
+        self.inference_client = inference_client
         self.data_recorder = DataRecorder(output_data_dir)
 
     def run(self):
@@ -25,7 +25,7 @@ class GameplayEngine:
 
         try:
             if PROFILER_DIRECTORY:
-                profiler = pyinstrument.Profiler(async_mode="enabled")
+                profiler = pyinstrument.Profiler()
                 profiler.start()
             uvloop.run(self.multi_continuously_play_games(COROUTINES_PER_PROCESS))
         except:
@@ -41,10 +41,10 @@ class GameplayEngine:
         recorder_game_id = self.data_recorder.start_game()
 
         agents = [
-            MCTSAgent(self.inference_interface, self.data_recorder, recorder_game_id),
-            MCTSAgent(self.inference_interface, self.data_recorder, recorder_game_id),
-            MCTSAgent(self.inference_interface, self.data_recorder, recorder_game_id),
-            MCTSAgent(self.inference_interface, self.data_recorder, recorder_game_id),
+            MCTSAgent(self.inference_client, self.data_recorder, recorder_game_id),
+            MCTSAgent(self.inference_client, self.data_recorder, recorder_game_id),
+            MCTSAgent(self.inference_client, self.data_recorder, recorder_game_id),
+            MCTSAgent(self.inference_client, self.data_recorder, recorder_game_id),
         ]
 
         game_over = False
@@ -68,7 +68,7 @@ class GameplayEngine:
 
     async def multi_continuously_play_games(self, num_coroutines: int):
         # We need to call this in here so that uvloop has had a chance to set the event loop first.
-        self.inference_interface.init_in_process(asyncio.get_event_loop())
+        self.inference_client.init_in_process(asyncio.get_event_loop())
 
         await asyncio.gather(
             *[self.continuously_play_games() for _ in range(num_coroutines)]

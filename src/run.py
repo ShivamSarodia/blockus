@@ -19,6 +19,10 @@ def main():
     parser_simulate.add_argument('--config', type=str, required=True)
     parser_simulate.add_argument('--output_dir', type=str, required=True)
 
+    # Subparser for 'serve'
+    parser_simulate = subparsers.add_parser('serve', help='Run model server')
+    parser_simulate.add_argument('--config', type=str, required=True)
+
     # Subparser for 'train'
     parser_train = subparsers.add_parser('train', help='Train neural network')
     parser_train.add_argument('--moves_dir', type=str, required=True)
@@ -51,6 +55,24 @@ def main():
 
         import simulation
         simulation.run(args.output_dir)
+
+
+    elif args.command == 'serve':
+        # Bit hacky, but we store the config path in an environment variable so
+        # that this process and all children processes can access it as needed to
+        # load the config.
+        os.environ["CONFIG_PATH"] = args.config
+
+        from configuration import config 
+        if config()["development"]["debug_mode"]:
+            logging.basicConfig(
+                level=logging.DEBUG,
+                format="%(asctime)s,%(msecs)d %(levelname)s: %(message)s",
+                datefmt="%H:%M:%S",
+            )    
+
+        import inference.server
+        inference.server.run()
 
 
     elif args.command == 'train':
