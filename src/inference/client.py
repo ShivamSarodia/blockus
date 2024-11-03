@@ -2,11 +2,13 @@ from typing import Tuple
 import random
 import numpy as np
 import asyncio
+import cacheout.lru
 
 from configuration import config
 from inference.actor import InferenceActor
 
 INFERENCE_CLIENT_BATCH_SIZE = config()["architecture"]["inference_batch_size"]
+INFERENCE_RECENT_CACHE_SIZE = config()["architecture"]["inference_recent_cache_size"]
 BOARD_SIZE = config()["game"]["board_size"]
 
 class InferenceClient:
@@ -21,8 +23,9 @@ class InferenceClient:
         self.evaluation_batch_ids = []
         self.futures = {}
 
-        # The event loop is set by init_in_process.
+        # These fields are set by init_in_process.
         self.loop = None
+        self.evaluation_cache = None
 
     async def evaluate(self, board: np.ndarray, move_indices: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -52,6 +55,7 @@ class InferenceClient:
 
     def init_in_process(self, loop: asyncio.AbstractEventLoop):
         self.loop = loop
+        self.evaluation_cache = cacheout.lru.LRUCache(maxsize=INFERENCE_RECENT_CACHE_SIZE)
 
     async def _evaluate_batch(self):
         # Make local copies of all the relevant values, and then reset 

@@ -19,6 +19,7 @@ residual_blocks = 8
 gameplay_processes = 2
 coroutines_per_process = 256
 inference_batch_size = 128
+inference_recent_cache_size = 1000
 
 [mcts]
 num_rollouts = 500
