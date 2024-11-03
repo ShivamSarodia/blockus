@@ -6,7 +6,7 @@ import asyncio
 from configuration import config
 from inference.actor import InferenceActor
 
-INFERENCE_CLIENT_BATCH_SIZE = config()["inference"]["inference_client_batch_size"]
+INFERENCE_CLIENT_BATCH_SIZE = config()["architecture"]["inference_batch_size"]
 BOARD_SIZE = config()["game"]["board_size"]
 
 class InferenceClient:

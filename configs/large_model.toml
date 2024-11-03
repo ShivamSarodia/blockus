@@ -15,11 +15,10 @@ value_head_flat_layer_width = 128
 policy_head_channels = 128
 residual_blocks = 19
 
-[inference]
-inference_client_batch_size = 128
-
 [architecture]
-coroutines_per_process = 512
+gameplay_processes = 2
+coroutines_per_process = 256
+inference_batch_size = 128
 
 [mcts]
 num_rollouts = 500

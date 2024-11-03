@@ -1,5 +1,5 @@
+import ray
 import asyncio
-import uvloop
 import random
 import time
 import pyinstrument
@@ -15,19 +15,20 @@ PROFILER_DIRECTORY = config()["development"]["profiler_directory"]
 COROUTINES_PER_PROCESS = config()["architecture"]["coroutines_per_process"]
 
 
-class GameplayEngine:
+@ray.remote
+class GameplayActor:
     def __init__(self, inference_client: InferenceClient, output_data_dir: str):
         self.inference_client = inference_client
         self.data_recorder = DataRecorder(output_data_dir)
 
-    def run(self):
+    async def run(self):
         print("Running gameplay process...")
 
         try:
             if PROFILER_DIRECTORY:
                 profiler = pyinstrument.Profiler()
                 profiler.start()
-            uvloop.run(self.multi_continuously_play_games(COROUTINES_PER_PROCESS))
+            await self.multi_continuously_play_games(COROUTINES_PER_PROCESS)
         except:
             self.data_recorder.flush()
             if PROFILER_DIRECTORY:
