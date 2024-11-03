@@ -15,5 +15,9 @@ def moves_array_to_player_pov(moves_array, player):
     return moves_array[MOVES["rotation_mapping"][(-player) % 4]]
 
 
+def moves_indices_to_player_pov(moves_indices, player):
+    return MOVES["rotation_mapping"][player % 4][moves_indices]
+
+
 def values_to_player_pov(values, player):
     return np.roll(values, shift=-player, axis=-1)

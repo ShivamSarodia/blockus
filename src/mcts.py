@@ -154,16 +154,30 @@ class MCTSValuesNode:
         }
         self.num_valid_moves = len(self.array_index_to_move_index)
 
+        # Rotate the occupancies into the player POV.
         player_pov_occupancies = player_pov_helpers.occupancies_to_player_pov(state.occupancies, state.player)
 
-        player_pov_values, player_pov_children_prior_logits = await inference_client.evaluate(player_pov_occupancies)
+        # Next, we need an array of the valid moves in the rotated POV. Importantly, our array will be in
+        # the same order as self.array_index_to_move_index. This means the result of the `evaluate` call
+        # will already be in the universal POV, without needing any additional rotation.
+        # 
+        # I'm a bit worried this reduces the efficacy of caching calls, and instead we must be passing in a
+        # sorted array of valid modes to ensure that each time the same board appears we're returning the same
+        # result. However, I _think_ that for a given board array one can almost always deduce which player's turn it is, 
+        # and therefore there's exactly one possibility for the valid moves array we pass in. (An exception might be near
+        # the end of a game where some players don't have valid moves? I'm not sure.)
+        player_pov_valid_move_indices = player_pov_helpers.moves_indices_to_player_pov(self.array_index_to_move_index, state.player)
 
-        # Rotate the player POV values and policy back to the original player's perspective.
+        player_pov_values, universal_children_prior_logits = await inference_client.evaluate(
+            player_pov_occupancies,
+            player_pov_valid_move_indices,
+        )
+
+        # Rotate the player POV values back to the original player's perspective.
         universal_values = player_pov_helpers.values_to_player_pov(player_pov_values, -state.player)
-        universal_children_prior_logits = player_pov_helpers.moves_array_to_player_pov(player_pov_children_prior_logits, -state.player)
 
-        # Exclude invalid moves and take the softmax.
-        universal_children_priors = softmax(universal_children_prior_logits[valid_moves])
+        # Take the softmax. Note that invalid moves are already excluded within the evaluate call.
+        universal_children_priors = softmax(universal_children_prior_logits)
 
         self.children_value_sums = np.zeros((4, self.num_valid_moves), dtype=float)
         self.children_visit_counts = np.zeros(self.num_valid_moves, dtype=int)
