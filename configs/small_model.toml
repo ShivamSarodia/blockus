@@ -1,7 +1,6 @@
 [development]
 debug_mode = true
-profiler_directory = "data/profiler"
-# profiler_directory = ""
+profile = true
 
 [game]
 board_size = 10

@@ -1,11 +1,14 @@
 from typing import Tuple
+import time
 import random
+import logging
 import numpy as np
 import asyncio
 import cacheout.lru
 
 from configuration import config
 from inference.actor import InferenceActor
+from event_logger import log_event
 
 INFERENCE_CLIENT_BATCH_SIZE = config()["architecture"]["inference_batch_size"]
 INFERENCE_RECENT_CACHE_SIZE = config()["architecture"]["inference_recent_cache_size"]
@@ -22,6 +25,8 @@ class InferenceClient:
         self.move_indices_batch = []
         self.evaluation_batch_ids = []
         self.futures = {}
+
+        self.last_evaluation_time = time.perf_counter()
 
         # These fields are set by init_in_process.
         self.loop = None
@@ -46,7 +51,17 @@ class InferenceClient:
         self.evaluation_batch_ids.append(evaluation_id)
 
         if len(self.evaluation_batch) == INFERENCE_CLIENT_BATCH_SIZE:
-            await self._evaluate_batch()
+            evaluation_params = self._fetch_and_clear_evaluation_params()
+            await self._evaluate_batch(*evaluation_params)
+        elif len(self.evaluation_batch) > 0 and time.perf_counter() - self.last_evaluation_time > 1:
+            log_event(
+                "timeout_evaluation",
+                {
+                    "batch_size": len(self.evaluation_batch)
+                },
+            )
+            evaluation_params = self._fetch_and_clear_evaluation_params()
+            await self._evaluate_batch(*evaluation_params)
 
         result = await future
         del self.futures[evaluation_id]
@@ -57,15 +72,18 @@ class InferenceClient:
         self.loop = loop
         self.evaluation_cache = cacheout.lru.LRUCache(maxsize=INFERENCE_RECENT_CACHE_SIZE)
 
-    async def _evaluate_batch(self):
+    def _fetch_and_clear_evaluation_params(self):
         # Make local copies of all the relevant values, and then reset 
         # the self.* copies. This way, when we switch to a different async
         # thread upon calling the await below, we don't need to worry about 
         # our values here getting clobbered.
-        evaluation_batch_np = np.stack(self.evaluation_batch)
-
+        #
         # I believe the [:] isn't necessary below, but I'm including it just
         # to be safe.
+        # 
+        # This function is not async, to ensure it runs before the event loop might
+        # interrupt.
+        evaluation_batch_np = np.stack(self.evaluation_batch)
         evaluation_batch_ids = self.evaluation_batch_ids[:]
         move_indices_batch = self.move_indices_batch[:]
 
@@ -73,6 +91,18 @@ class InferenceClient:
         self.move_indices_batch = []
         self.evaluation_batch_ids = []
 
+        self.last_evaluation_time = time.perf_counter()
+
+        return evaluation_batch_np, evaluation_batch_ids, move_indices_batch
+
+    async def _evaluate_batch(self, evaluation_batch_np, evaluation_batch_ids, move_indices_batch):
+        log_event(
+            "batch_evaluation",
+            {
+                "batch_size": len(evaluation_batch_ids)
+            },
+        )
+        
         values, policy_logits = await self.actor.evaluate_batch.remote(evaluation_batch_np)
 
         assert len(values) == len(evaluation_batch_ids)

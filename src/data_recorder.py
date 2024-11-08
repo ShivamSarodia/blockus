@@ -11,7 +11,7 @@ class DataRecorder:
     def __init__(self, directory, game_flush_threshold=10):
         self.game_flush_threshold = game_flush_threshold
 
-        self.directory = directory
+        self.directory = os.path.join(directory, "games/")
         os.makedirs(directory, exist_ok=True)
 
         # This object is a map from a randomly generated game ID to a dictionary of the form:
