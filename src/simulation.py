@@ -1,14 +1,18 @@
 import ray
 import time
 import subprocess
+import ray.exceptions
 import os
 
 from configuration import config
 from inference.client import InferenceClient
 from inference.actor import InferenceActor
 from gameplay_actor import GameplayActor
+from datetime import datetime, timedelta
 
 
+RUNTIME = config()["development"]["runtime"]
+DISPLAY_LOGS_IN_CONSOLE = config()["development"]["display_logs_in_console"]
 BOARD_SIZE = config()["game"]["board_size"]
 NUM_MOVES = config()["game"]["num_moves"]
 GAMEPLAY_PROCESSES = config()["architecture"]["gameplay_processes"]
@@ -16,7 +20,7 @@ COROUTINES_PER_PROCESS = config()["architecture"]["coroutines_per_process"]
 
 
 def run(output_data_dir):
-    ray.init()
+    ray.init(log_to_driver=DISPLAY_LOGS_IN_CONSOLE)
 
     # Start the Ray actor that runs GPU computations.
     inference_actor = InferenceActor.remote()
@@ -30,11 +34,14 @@ def run(output_data_dir):
 
     # Blocks indefinitely, because gameplay actor never finishes.
     try:
-        ray.get([
-            gameplay_actor.run.remote() for gameplay_actor in gameplay_actors
-        ])
-    except KeyboardInterrupt:
-        print("Caught KeyboardInterrupt, shutting down...")
+        finish_time = (datetime.now() + timedelta(seconds=RUNTIME)).strftime("%I:%M:%S %p")
+        print(f"Starting gameplay actors, running for {RUNTIME} seconds, finishing at {finish_time}...")
+        ray.get(
+            [gameplay_actor.run.remote() for gameplay_actor in gameplay_actors],
+            timeout=RUNTIME,
+        )
+    except (KeyboardInterrupt, ray.exceptions.GetTimeoutError):
+        print("Shutting down...")
         print("Cleaning up gameplay actors...")
         ray.get([
             gameplay_actor.cleanup.remote() for gameplay_actor in gameplay_actors

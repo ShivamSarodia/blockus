@@ -1,6 +1,8 @@
 [development]
 debug_mode = true
 profile = true
+runtime = 120
+display_logs_in_console = true
 
 [game]
 board_size = 10
@@ -15,7 +17,7 @@ policy_head_channels = 64
 residual_blocks = 8
 
 [architecture]
-gameplay_processes = 2
+gameplay_processes = 6
 coroutines_per_process = 256
 inference_batch_size = 128
 inference_recent_cache_size = 1000
