@@ -4,7 +4,6 @@ profile = false
 runtime = 7200
 display_logs_in_console = false
 output_directory = "data/"
-report_cache_stats = true
 
 [game]
 board_size = 10
@@ -22,8 +21,6 @@ residual_blocks = 8
 gameplay_processes = 6
 coroutines_per_process = 256
 inference_batch_size = 128
-# This value should ideally be larger than mcts.num_rollouts * coroutines_per_process. 
-inference_recent_cache_size = 256000
 
 [mcts]
 num_rollouts = 500
