@@ -13,6 +13,7 @@ from event_logger import log_event
 INFERENCE_CLIENT_BATCH_SIZE = config()["architecture"]["inference_batch_size"]
 INFERENCE_RECENT_CACHE_SIZE = config()["architecture"]["inference_recent_cache_size"]
 USE_CACHE = INFERENCE_RECENT_CACHE_SIZE > 0
+REPORT_CACHE_STATS = config()["development"]["report_cache_stats"]
 BOARD_SIZE = config()["game"]["board_size"]
 
 class InferenceClient:
@@ -107,6 +108,16 @@ class InferenceClient:
         self.loop = loop
         if USE_CACHE:
             self.evaluation_cache = cacheout.lru.LRUCache(maxsize=INFERENCE_RECENT_CACHE_SIZE)
+            if REPORT_CACHE_STATS:
+                self.evaluation_cache.stats.enable()
+                self.loop.create_task(self._log_cache_statistics())
+
+    async def _log_cache_statistics(self):
+        while True:
+            await asyncio.sleep(3 * 60)
+            stats_report = self.evaluation_cache.stats.info().to_dict()
+            log_event("cache_stats", stats_report)
+            self.evaluation_cache.stats.reset()
 
     def _fetch_and_clear_evaluation_params(self):
         # Make local copies of all the relevant values, and then reset 

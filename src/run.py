@@ -17,7 +17,6 @@ def main():
     # Subparser for 'simulate'
     parser_simulate = subparsers.add_parser('simulate', help='Run self-play sessions')
     parser_simulate.add_argument('--config', type=str, required=True)
-    parser_simulate.add_argument('--output_dir', type=str, required=True)
 
     # Subparser for 'serve'
     parser_simulate = subparsers.add_parser('serve', help='Run model server')

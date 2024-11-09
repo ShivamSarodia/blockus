@@ -1,9 +1,10 @@
 [development]
 debug_mode = true
 profile = false
-runtime = 10800
+runtime = 7200
 display_logs_in_console = false
 output_directory = "data/"
+report_cache_stats = true
 
 [game]
 board_size = 10
