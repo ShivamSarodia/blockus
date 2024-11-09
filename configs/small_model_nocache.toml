@@ -21,8 +21,7 @@ residual_blocks = 8
 gameplay_processes = 6
 coroutines_per_process = 256
 inference_batch_size = 128
-# This value should ideally be larger than mcts.num_rollouts * coroutines_per_process. 
-inference_recent_cache_size = 256000
+inference_recent_cache_size = 0
 
 [mcts]
 num_rollouts = 500

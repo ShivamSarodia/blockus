@@ -12,6 +12,7 @@ from event_logger import log_event
 
 INFERENCE_CLIENT_BATCH_SIZE = config()["architecture"]["inference_batch_size"]
 INFERENCE_RECENT_CACHE_SIZE = config()["architecture"]["inference_recent_cache_size"]
+USE_CACHE = INFERENCE_RECENT_CACHE_SIZE > 0
 BOARD_SIZE = config()["game"]["board_size"]
 
 class InferenceClient:
@@ -41,26 +42,27 @@ class InferenceClient:
                        This parameter is necessary for caching purposes, so that we only cache the moves that are
                        relevant. This method returns the policy logits in the same order as this list.
         """
-        cache_key = board.tobytes() + move_indices.tobytes()
-        cached_result = self.evaluation_cache.get(cache_key)
+        if USE_CACHE:
+            cache_key = board.tobytes() + move_indices.tobytes()
+            cached_result = self.evaluation_cache.get(cache_key)
 
         # The cached result is already done, so just return that.
-        if cached_result and cached_result.done():
-            log_event("evaluate_cache_lookup", {
-                "cache_key": str(cache_key),
-                "result": "done",
-                "type": "done",
-            })
+        if USE_CACHE and cached_result and cached_result.done():
+            # log_event("evaluate_cache_lookup", {
+            #     "cache_key": str(cache_key),
+            #     "result": "done",
+            #     "type": "done",
+            # })
             return cached_result.result()
         
         # We found a value in the cache, but it isn't done yet. That means this result
         # is likely in the currently pending batch of evaluations.
-        elif cached_result:
-            log_event("evaluate_cache_lookup", {
-                "cache_key": str(cache_key),
-                "result": "future",
-                "type": str(type(cached_result)),
-            })            
+        elif USE_CACHE and cached_result:
+            # log_event("evaluate_cache_lookup", {
+            #     "cache_key": str(cache_key),
+            #     "result": "future",
+            #     "type": str(type(cached_result)),
+            # })            
             self.cache_blocked += 1
             future = cached_result
             evaluation_id = None
@@ -68,16 +70,18 @@ class InferenceClient:
         # The value is not in the cache, so we need to add it to the evaluation
         # batch.
         else:
-            log_event("evaluate_cache_lookup", {
-                "cache_key": str(cache_key),
-                "result": "none",
-                "type": "none",
-            })            
+            # log_event("evaluate_cache_lookup", {
+            #     "cache_key": str(cache_key),
+            #     "result": "none",
+            #     "type": "none",
+            # })
 
             evaluation_id = random.getrandbits(60)
             future = self.loop.create_future()
             self.futures[evaluation_id] = future
-            self.evaluation_cache.set(cache_key, future)
+
+            if USE_CACHE:
+                self.evaluation_cache.set(cache_key, future)
 
             self.evaluation_batch.append(board)
             self.move_indices_batch.append(move_indices)
@@ -101,7 +105,8 @@ class InferenceClient:
 
     def init_in_process(self, loop: asyncio.AbstractEventLoop):
         self.loop = loop
-        self.evaluation_cache = cacheout.lru.LRUCache(maxsize=INFERENCE_RECENT_CACHE_SIZE)
+        if USE_CACHE:
+            self.evaluation_cache = cacheout.lru.LRUCache(maxsize=INFERENCE_RECENT_CACHE_SIZE)
 
     def _fetch_and_clear_evaluation_params(self):
         # Make local copies of all the relevant values, and then reset 

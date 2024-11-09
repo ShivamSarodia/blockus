@@ -3,6 +3,7 @@ import time
 import subprocess
 import ray.exceptions
 import os
+import json
 
 from configuration import config
 from inference.client import InferenceClient
@@ -12,6 +13,7 @@ from datetime import datetime, timedelta
 
 
 RUNTIME = config()["development"]["runtime"]
+BASE_OUTPUT_DIRECTORY = config()["development"]["output_directory"]
 DISPLAY_LOGS_IN_CONSOLE = config()["development"]["display_logs_in_console"]
 BOARD_SIZE = config()["game"]["board_size"]
 NUM_MOVES = config()["game"]["num_moves"]
@@ -19,7 +21,19 @@ GAMEPLAY_PROCESSES = config()["architecture"]["gameplay_processes"]
 COROUTINES_PER_PROCESS = config()["architecture"]["coroutines_per_process"]
 
 
-def run(output_data_dir):
+def run():
+    output_data_dir = generate_output_data_dir()
+
+    # To start, save the config to the output data directory.
+    with open(output_data_dir + "/config.json", "w") as config_file:
+        json.dump(
+            config(),
+            config_file,
+            indent=4,
+            separators=(',', ': ')
+        )
+    print("Saved config file to output directory.")
+
     ray.init(log_to_driver=DISPLAY_LOGS_IN_CONSOLE)
 
     # Start the Ray actor that runs GPU computations.
@@ -55,6 +69,21 @@ def run(output_data_dir):
         copy_ray_logs(output_data_dir)
 
         print("Exiting.")
+
+def generate_output_data_dir():
+    random_word = subprocess.run(
+        "sort -R /usr/share/dict/words | head -n 1 | tr '[:upper:]' '[:lower:]'",
+        shell=True,
+        capture_output = True,
+        text=True,
+    ).stdout.strip()
+    output_data_dir = os.path.join(
+        BASE_OUTPUT_DIRECTORY,
+        f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}-{random_word}/"
+    )
+    print(f"\033[94m\033[1mOUTPUT DATA DIRECTORY: {output_data_dir}\033[0m")
+    os.makedirs(output_data_dir, exist_ok=True)
+    return output_data_dir
 
 def copy_ray_logs(output_data_dir):
     output_file_path = os.path.join(output_data_dir, "logs.txt")

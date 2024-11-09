@@ -1,7 +1,8 @@
 [development]
 debug_mode = true
-profiler_directory = "data/profiler"
-# profiler_directory = ""
+profile = true
+runtime = 120
+display_logs_in_console = true
 
 [game]
 board_size = 10
@@ -16,9 +17,11 @@ policy_head_channels = 128
 residual_blocks = 19
 
 [architecture]
-gameplay_processes = 2
+gameplay_processes = 6
 coroutines_per_process = 256
 inference_batch_size = 128
+# This value should ideally be larger than mcts.num_rollouts * coroutines_per_process. 
+inference_recent_cache_size = 256000
 
 [mcts]
 num_rollouts = 500

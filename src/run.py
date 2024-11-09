@@ -45,16 +45,8 @@ def main():
         # load the config.
         os.environ["CONFIG_PATH"] = args.config
 
-        from configuration import config 
-        if config()["development"]["debug_mode"]:
-            logging.basicConfig(
-                level=logging.DEBUG,
-                format="%(asctime)s,%(msecs)d %(levelname)s: %(message)s",
-                datefmt="%H:%M:%S",
-            )
-
         import simulation
-        simulation.run(args.output_dir)
+        simulation.run()
 
 
     elif args.command == 'serve':
@@ -62,14 +54,6 @@ def main():
         # that this process and all children processes can access it as needed to
         # load the config.
         os.environ["CONFIG_PATH"] = args.config
-
-        from configuration import config 
-        if config()["development"]["debug_mode"]:
-            logging.basicConfig(
-                level=logging.DEBUG,
-                format="%(asctime)s,%(msecs)d %(levelname)s: %(message)s",
-                datefmt="%H:%M:%S",
-            )    
 
         import inference.server
         inference.server.run()
