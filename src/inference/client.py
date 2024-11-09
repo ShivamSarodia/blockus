@@ -21,12 +21,13 @@ class InferenceClient:
         # This fills up as evaluation requests come in. When full, we submit to
         # an external process. We don't send these one-by-one because each remote()
         # request has some overhead.
+        self.cache_blocked = 0
         self.evaluation_batch = []
         self.move_indices_batch = []
         self.evaluation_batch_ids = []
         self.futures = {}
 
-        self.last_evaluation_time = time.perf_counter()
+        # self.last_evaluation_time = time.perf_counter()
 
         # These fields are set by init_in_process.
         self.loop = None
@@ -40,31 +41,61 @@ class InferenceClient:
                        This parameter is necessary for caching purposes, so that we only cache the moves that are
                        relevant. This method returns the policy logits in the same order as this list.
         """
-        # TODO: When I implement caching, make sure to cache on move_indices too.
+        cache_key = board.tobytes() + move_indices.tobytes()
+        cached_result = self.evaluation_cache.get(cache_key)
 
-        evaluation_id = random.getrandbits(60)
-        future = self.loop.create_future()
-        self.futures[evaluation_id] = future
+        # The cached result is already done, so just return that.
+        if cached_result and cached_result.done():
+            log_event("evaluate_cache_lookup", {
+                "cache_key": str(cache_key),
+                "result": "done",
+                "type": "done",
+            })
+            return cached_result.result()
+        
+        # We found a value in the cache, but it isn't done yet. That means this result
+        # is likely in the currently pending batch of evaluations.
+        elif cached_result:
+            log_event("evaluate_cache_lookup", {
+                "cache_key": str(cache_key),
+                "result": "future",
+                "type": str(type(cached_result)),
+            })            
+            self.cache_blocked += 1
+            future = cached_result
+            evaluation_id = None
+        
+        # The value is not in the cache, so we need to add it to the evaluation
+        # batch.
+        else:
+            log_event("evaluate_cache_lookup", {
+                "cache_key": str(cache_key),
+                "result": "none",
+                "type": "none",
+            })            
 
-        self.evaluation_batch.append(board)
-        self.move_indices_batch.append(move_indices)
-        self.evaluation_batch_ids.append(evaluation_id)
+            evaluation_id = random.getrandbits(60)
+            future = self.loop.create_future()
+            self.futures[evaluation_id] = future
+            self.evaluation_cache.set(cache_key, future)
 
-        if len(self.evaluation_batch) == INFERENCE_CLIENT_BATCH_SIZE:
-            evaluation_params = self._fetch_and_clear_evaluation_params()
-            await self._evaluate_batch(*evaluation_params)
-        elif len(self.evaluation_batch) > 0 and time.perf_counter() - self.last_evaluation_time > 1:
-            log_event(
-                "timeout_evaluation",
-                {
-                    "batch_size": len(self.evaluation_batch)
-                },
-            )
+            self.evaluation_batch.append(board)
+            self.move_indices_batch.append(move_indices)
+            self.evaluation_batch_ids.append(evaluation_id)
+
+        # Check if we're ready to evaluate the batch based on the batch size and the
+        # number of evaluations currently waiting on cached values.
+        if (
+            len(self.evaluation_batch) > 0
+        ) and (
+            len(self.evaluation_batch) + self.cache_blocked >= INFERENCE_CLIENT_BATCH_SIZE
+        ):
             evaluation_params = self._fetch_and_clear_evaluation_params()
             await self._evaluate_batch(*evaluation_params)
 
         result = await future
-        del self.futures[evaluation_id]
+        if evaluation_id:
+            del self.futures[evaluation_id]
 
         return result
 
@@ -87,22 +118,24 @@ class InferenceClient:
         evaluation_batch_ids = self.evaluation_batch_ids[:]
         move_indices_batch = self.move_indices_batch[:]
 
+        log_event(
+            "fetch_evaluation_params",
+            {
+                "batch_size": len(evaluation_batch_np),
+                "cache_blocked": self.cache_blocked,
+            },
+        )
+
+        self.cache_blocked = 0
         self.evaluation_batch = []
         self.move_indices_batch = []
         self.evaluation_batch_ids = []
 
-        self.last_evaluation_time = time.perf_counter()
+        # self.last_evaluation_time = time.perf_counter()
 
         return evaluation_batch_np, evaluation_batch_ids, move_indices_batch
 
     async def _evaluate_batch(self, evaluation_batch_np, evaluation_batch_ids, move_indices_batch):
-        log_event(
-            "batch_evaluation",
-            {
-                "batch_size": len(evaluation_batch_ids)
-            },
-        )
-        
         values, policy_logits = await self.actor.evaluate_batch.remote(evaluation_batch_np)
 
         assert len(values) == len(evaluation_batch_ids)
