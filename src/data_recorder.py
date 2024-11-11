@@ -19,7 +19,7 @@ class DataRecorder:
         #     "occupancies": [],
         #     "policies": [],
         #     "players": [],
-        #     "values": [],  (populated only if DEBUG MODE is true)
+        #     "values": [],
         # }
         self.games = {}
         self.finished_games = set()

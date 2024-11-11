@@ -1,3 +1,4 @@
+import random
 from typing import Dict
 import numpy as np
 
@@ -9,8 +10,10 @@ from inference.client import InferenceClient
 
 
 NUM_MOVES = config()["game"]["num_moves"]
-NUM_MCTS_ROLLOUTS = config()["mcts"]["num_rollouts"]
-UCB_DEFAULT_CHILD_VALUE = config()["mcts"]["ucb_default_child_value"]
+FULL_MOVE_PROBABILITY = config()["mcts"]["full_move_probability"]
+FULL_MOVE_ROLLOUTS = config()["mcts"]["full_move_rollouts"]
+FAST_MOVE_ROLLOUTS = config()["mcts"]["fast_move_rollouts"]
+
 UCB_EXPLORATION = config()["mcts"]["ucb_exploration"]
 ROOT_EXPLORATION_FRACTION = config()["mcts"]["root_exploration_fraction"]
 ROOT_DIRICHLET_ALPHA = config()["mcts"]["root_dirichlet_alpha"]
@@ -22,16 +25,24 @@ def softmax(x):
 
 
 class MCTSAgent:
-    def __init__(self, inference_client: InferenceClient, data_recorder: DataRecorder, recorder_game_id: int):
+    def __init__(
+            self,
+            inference_client: InferenceClient,
+            data_recorder: DataRecorder,
+            recorder_game_id: int,
+        ):
         self.inference_client = inference_client
         self.data_recorder = data_recorder
         self.recorder_game_id = recorder_game_id
 
     async def select_move_index(self, state: State):
+        is_full_move = random.random() < FULL_MOVE_PROBABILITY
+        num_rollouts = FULL_MOVE_ROLLOUTS if is_full_move else FAST_MOVE_ROLLOUTS
+
         search_root = MCTSValuesNode()
         await search_root.get_value_and_expand_children(state, self.inference_client)
 
-        for _ in range(NUM_MCTS_ROLLOUTS):
+        for _ in range(num_rollouts):
             scratch_state = state.clone()
 
             # At the start of each iteration, nodes_visited will be one 
@@ -45,8 +56,6 @@ class MCTSAgent:
                 moves_played.append(move_index)
 
                 game_over = scratch_state.play_move(move_index)
-                # print("Move played:", move_index)
-                # state.pretty_print_board()
 
                 # If the game is over, we can now assign values based on the final state.
                 if game_over:
@@ -75,19 +84,20 @@ class MCTSAgent:
                 node.children_value_sums[:,node_array_index] += value 
                 node.children_visit_counts[node_array_index] += 1
 
-        # Record the search tree result.
-        # If we need to save memory, we can just save the `search_root.array_index_to_move_index` and 
-        # `search_root.children_visit_counts` arrays, and compute the full policy (of length NUM_MOVES)
-        # when writing to disk.
-        policy = np.zeros((NUM_MOVES,))
-        policy[search_root.array_index_to_move_index] = (
-            search_root.children_visit_counts / np.sum(search_root.children_visit_counts)
-        )
-        self.data_recorder.record_rollout_result(
-            self.recorder_game_id,
-            state,
-            policy,
-        )
+        # Record the search tree result for full moves.
+        if is_full_move:
+            # If we need to save memory, we can just save the `search_root.array_index_to_move_index` and 
+            # `search_root.children_visit_counts` arrays, and compute the full policy (of length NUM_MOVES)
+            # when writing to disk.
+            policy = np.zeros((NUM_MOVES,))
+            policy[search_root.array_index_to_move_index] = (
+                search_root.children_visit_counts / np.sum(search_root.children_visit_counts)
+            )
+            self.data_recorder.record_rollout_result(
+                self.recorder_game_id,
+                state,
+                policy,
+            )
 
         # Select the move to play now.
         return search_root.get_move_index_to_play(state)
@@ -96,7 +106,12 @@ class MCTSAgent:
 class MCTSValuesNode:
     def __init__(self):
         # These values are all populated when get_value_and_expand_children is called.
+
+        # Number of valid moves from the state associated with this node.
         self.num_valid_moves = None
+
+        # The values at this node itself, as returned by the neural network.
+        self.values = None
 
         # Shape (NUM_VALID_MOVES,)
         # Usage: self.children_value_sums[self.move_index_to_array_index[move_index]] -> value sum for move_index
@@ -110,7 +125,7 @@ class MCTSValuesNode:
     
         self.children_value_sums = None         # Shape (4, NUM_VALID_MOVES)
         self.children_visit_counts = None       # Shape (NUM_VALID_MOVES,)
-        self.children_priors = None             # Shape (NUM_VALID_MOVES,)
+        self.children_priors = None            # Shape (NUM_VALID_MOVES,)
 
         # This populates over time only as nodes are visited.
         self.move_index_to_child_node: Dict[int, MCTSValuesNode] = {}
@@ -123,9 +138,16 @@ class MCTSValuesNode:
             self.children_visit_counts,
             where=(self.children_visit_counts != 0)
         )
-        # Where there's no visit count, use a default value. This value isn't 0 because that's "not fair",
-        # given random play there's some non-zero expected value so let's use that instead.
-        exploitation_scores[self.children_visit_counts == 0] = UCB_DEFAULT_CHILD_VALUE
+
+        # For children that have no visits, we just use the value of this node itself based on what the 
+        # NN has reported.
+        #
+        # For example, if this node nearly always loses for player 1, and we're doing rollouts for player 1,
+        # we should assume that an unexplored node is probably a loss for player 1 as well.
+        #
+        # We should probably tune this a bit. For example, as we explore more children of this node, we could
+        # weigh their results more heavily here.
+        exploitation_scores[self.children_visit_counts == 0] = self.values[state.player]
 
         # Followed this: https://aaowens.github.io/blog_mcts.html
         sqrt_total_visit_count = np.sqrt(np.sum(self.children_visit_counts) + 1)
@@ -173,7 +195,7 @@ class MCTSValuesNode:
             player_pov_valid_move_indices,
         )
 
-        # Rotate the player POV values back to the original player's perspective.
+        # Rotate the player POV values back to the universal perspective.
         universal_values = player_pov_helpers.values_to_player_pov(player_pov_values, -state.player)
 
         # Take the softmax. Note that invalid moves are already excluded within the evaluate call.
@@ -182,7 +204,8 @@ class MCTSValuesNode:
         self.children_value_sums = np.zeros((4, self.num_valid_moves), dtype=float)
         self.children_visit_counts = np.zeros(self.num_valid_moves, dtype=int)
         self.children_priors = universal_children_priors
-        return universal_values
+        self.values = universal_values
+        return self.values
 
     def get_move_index_to_play(self, state: State):
         probabilities = softmax(self.children_visit_counts)

@@ -23,11 +23,10 @@ coroutines_per_process = 256
 inference_batch_size = 128
 
 [mcts]
-num_rollouts = 500
+full_move_probability = 0.2
+full_move_rollouts = 500
+fast_move_rollouts = 100
 # Very haphazard guess at an exploration parameter.
 ucb_exploration = 1.4
-# This is 0.25, because we assume that for an unexpanded child there's a 1/4 
-# chance of winning from it.
-ucb_default_child_value = 0.25
 root_dirichlet_alpha = 0.03
 root_exploration_fraction = 0.25
