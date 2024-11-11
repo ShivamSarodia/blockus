@@ -1,7 +1,7 @@
 [development]
 debug_mode = true
 profile = false
-runtime = 7200
+runtime = 120
 display_logs_in_console = false
 output_directory = "data/"
 
