@@ -23,7 +23,7 @@ def _load_config():
     config = {}
 
     config_paths = os.environ["CONFIG_PATHS"].split(",")
-    config_overrides = os.environ["CONFIG_OVERRIDES"].split(",")
+    config_overrides = os.environ["CONFIG_OVERRIDES"].split(",") if "CONFIG_OVERRIDES" in os.environ else []
 
     for config_path in config_paths:
         with open(config_path, "rb") as f:
