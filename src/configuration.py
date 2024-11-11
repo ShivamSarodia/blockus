@@ -29,7 +29,6 @@ def _load_config():
         with open(config_path, "rb") as f:
             config_level = tomllib.load(f)
             merge_into_dict(config, config_level)
-    print("Loaded config: ", json.dumps(config))
 
     # Now, apply each override to the config.
     for override in config_overrides:
@@ -43,6 +42,7 @@ def _load_config():
         current[keys[-1]] = json.loads(value)
 
     _CONFIG = config
+    print("Loaded config: ", json.dumps(_CONFIG))
 
 def config():
     global _CONFIG
