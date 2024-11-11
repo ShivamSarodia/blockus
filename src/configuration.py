@@ -1,15 +1,33 @@
 import os
 import numpy as np
 import tomllib
+import json
 
 _CONFIG = None
 _MOVES = None
 
+def merge_into_dict(original_dict, new_values):
+    assert isinstance(original_dict, dict)
+    assert isinstance(new_values, dict)
+    for key in new_values:
+        if key in original_dict:
+            if isinstance(original_dict[key], dict):
+                merge_into_dict(original_dict[key], new_values[key])
+            else:
+                original_dict[key] = new_values[key]
+        else:
+            original_dict[key] = new_values[key]
+
 def _load_config():
     global _CONFIG
-    with open(os.environ["CONFIG_PATH"], "rb") as f:
-        _CONFIG = tomllib.load(f)
-    print("Loaded config from file:", os.environ["CONFIG_PATH"])
+    config = {}
+    config_paths = os.environ["CONFIG_PATHS"].split(",")
+    for config_path in config_paths:
+        with open(config_path, "rb") as f:
+            config_level = tomllib.load(f)
+            merge_into_dict(config, config_level)
+    print("Loaded config: ", json.dumps(config))
+    _CONFIG = config
 
 def config():
     global _CONFIG

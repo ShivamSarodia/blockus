@@ -16,7 +16,7 @@ def main():
 
     # Subparser for 'simulate'
     parser_simulate = subparsers.add_parser('simulate', help='Run self-play sessions')
-    parser_simulate.add_argument('--config', type=str, required=True)
+    parser_simulate.add_argument('--config', type=str, nargs='+', required=True, help='Paths to one or more config files')
 
     # Subparser for 'serve'
     parser_simulate = subparsers.add_parser('serve', help='Run model server')
@@ -42,7 +42,7 @@ def main():
         # Bit hacky, but we store the config path in an environment variable so
         # that this process and all children processes can access it as needed to
         # load the config.
-        os.environ["CONFIG_PATH"] = args.config
+        os.environ["CONFIG_PATHS"] = ",".join(args.config)
 
         import simulation
         simulation.run()
