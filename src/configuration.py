@@ -21,12 +21,27 @@ def merge_into_dict(original_dict, new_values):
 def _load_config():
     global _CONFIG
     config = {}
+
     config_paths = os.environ["CONFIG_PATHS"].split(",")
+    config_overrides = os.environ["CONFIG_OVERRIDES"].split(",")
+
     for config_path in config_paths:
         with open(config_path, "rb") as f:
             config_level = tomllib.load(f)
             merge_into_dict(config, config_level)
     print("Loaded config: ", json.dumps(config))
+
+    # Now, apply each override to the config.
+    for override in config_overrides:
+        key, value = override.split("=")
+        keys = key.split(".")
+        current = config
+        for key in keys[:-1]:
+            current = current[key]
+        
+        assert keys[-1] in current, "Override key not found in config: " + override
+        current[keys[-1]] = json.loads(value)
+
     _CONFIG = config
 
 def config():
