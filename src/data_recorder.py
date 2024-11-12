@@ -20,6 +20,7 @@ class DataRecorder:
         #     "policies": [],
         #     "players": [],
         #     "values": [],
+        #     "game_ids": [],
         # }
         self.games = {}
         self.finished_games = set()
@@ -47,6 +48,7 @@ class DataRecorder:
             player_pov_helpers.moves_array_to_player_pov(policy, state.player)
         )
         game["players"].append(state.player)
+        game["game_ids"].append(game_id)
     
     def record_game_end(self, game_id: int, values: np.ndarray):
         game = self.games[game_id]
@@ -68,10 +70,13 @@ class DataRecorder:
         for game_id in self.finished_games:
             game = self.games[game_id]
 
-            occupancies.append(np.array(game["occupancies"]))
-            policies.append(np.array(game["policies"]))
-            values.append(np.array(game["values"]))
-            game_ids.append(game_id)
+            # Some small number of games will have no data, because they were composed
+            # only of fast rollouts that didn't report any states.
+            if len(game["occupancies"]) > 0:
+                occupancies.append(np.array(game["occupancies"]))
+                policies.append(np.array(game["policies"]))
+                values.append(np.array(game["values"]))
+                game_ids.append(np.array(game["game_ids"]))
 
             del self.games[game_id]
         
@@ -83,7 +88,7 @@ class DataRecorder:
 
         np.savez(
             os.path.join(self.directory, f"{int(time.time() * 1000)}.npz"),
-            game_ids=np.array(game_ids),
+            game_ids=np.concatenate(game_ids),
             occupancies=np.concatenate(occupancies),
             policies=np.concatenate(policies),
             values=np.concatenate(values)
