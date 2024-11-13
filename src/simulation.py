@@ -19,6 +19,7 @@ BOARD_SIZE = config()["game"]["board_size"]
 NUM_MOVES = config()["game"]["num_moves"]
 GAMEPLAY_PROCESSES = config()["architecture"]["gameplay_processes"]
 COROUTINES_PER_PROCESS = config()["architecture"]["coroutines_per_process"]
+NETWORKS = config()["networks"]
 
 
 def run():
@@ -37,12 +38,15 @@ def run():
     ray.init(log_to_driver=DISPLAY_LOGS_IN_CONSOLE)
 
     # Start the Ray actor that runs GPU computations.
-    inference_actor = InferenceActor.remote()
-    inference_client = InferenceClient(inference_actor)
+    inference_clients = {}
+    for network_name, network_config in NETWORKS.items():
+        print(f"Starting inference actor for network '{network_name}'...")
+        inference_actor = InferenceActor.remote(network_config)
+        inference_clients[network_name] = InferenceClient(inference_actor, network_config["batch_size"])
 
-    # Now, start two Ray actors that run gameplay.
+    # Now, start Ray actors that run gameplay.
     gameplay_actors = [
-        GameplayActor.remote(inference_client, output_data_dir)
+        GameplayActor.remote(inference_clients, output_data_dir)
         for _ in range(GAMEPLAY_PROCESSES)
     ]
 

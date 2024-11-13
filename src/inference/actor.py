@@ -3,6 +3,7 @@ import ray
 from typing import Tuple
 import torch
 import time
+from typing import Dict
 
 from configuration import config
 from neural_net import NeuralNet
@@ -12,8 +13,14 @@ BOARD_SIZE = config()["game"]["board_size"]
 
 @ray.remote
 class InferenceActor:
-    def __init__(self) -> None:
-        self.model = NeuralNet().to("mps")
+    def __init__(self, network_config: Dict) -> None:
+        self.network_config = network_config
+
+        self.model = NeuralNet(network_config).to("mps")
+        model_path = network_config["model_path"]
+        self.model.load_state_dict(torch.load(model_path))
+        
+        print(f"Loaded model from file: {model_path}")
     
     def evaluate_batch(self, boards) -> Tuple[np.ndarray, np.ndarray]:
         # Include an extra .copy() here so we don't get a scary PyTorch warning about 

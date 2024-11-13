@@ -3,9 +3,12 @@ import asyncio
 import random
 import time
 import os
+import copy
 import pyinstrument
+import json
+from typing import Dict
 
-from configuration import config
+from configuration import config, merge_into_dict
 from data_recorder import DataRecorder
 from inference.client import InferenceClient
 from mcts import MCTSAgent
@@ -15,12 +18,12 @@ from event_logger import log_event
 
 USE_PROFILER = config()["development"]["profile"]
 COROUTINES_PER_PROCESS = config()["architecture"]["coroutines_per_process"]
-
+AGENTS = config()["agents"]
 
 @ray.remote
 class GameplayActor:
-    def __init__(self, inference_client: InferenceClient, output_data_dir: str):
-        self.inference_client = inference_client
+    def __init__(self, inference_clients: Dict[str, InferenceClient], output_data_dir: str):
+        self.inference_clients = inference_clients
         self.output_data_dir = output_data_dir
         self.data_recorder = DataRecorder(output_data_dir)
         self.profiler = None
@@ -50,12 +53,23 @@ class GameplayActor:
     async def play_game(self):
         recorder_game_id = self.data_recorder.start_game()
 
-        agents = [
-            MCTSAgent(self.inference_client, self.data_recorder, recorder_game_id),
-            MCTSAgent(self.inference_client, self.data_recorder, recorder_game_id),
-            MCTSAgent(self.inference_client, self.data_recorder, recorder_game_id),
-            MCTSAgent(self.inference_client, self.data_recorder, recorder_game_id),
-        ]
+        # Shuffle the agents randomly.
+        agent_configs = random.sample(AGENTS, k=len(AGENTS))
+
+        agents = []
+        for agent_config in agent_configs:
+            if "mcts" in agent_config:
+                mcts_config = agent_config["mcts"]
+                network_name = mcts_config["network"]
+                agent = MCTSAgent(
+                    mcts_config,
+                    self.inference_clients[network_name],
+                    self.data_recorder,
+                    recorder_game_id,
+                )
+                agents.append(agent)
+            else:
+                raise "Unknown agent type."
 
         game_over = False
         state = State()
@@ -64,9 +78,14 @@ class GameplayActor:
             move_index = await agent.select_move_index(state)
             game_over = state.play_move(move_index)
             log_event("made_move")
+        
+        result = state.result()
+        log_event("game_result", [
+            [agent_configs[i]["name"], state.result()[i]]
+            for i in range(4)
+        ])
 
-        self.data_recorder.record_game_end(recorder_game_id, state.result())
-
+        self.data_recorder.record_game_end(recorder_game_id, result)
 
     async def continuously_play_games(self):
         while True:
@@ -77,7 +96,8 @@ class GameplayActor:
 
     async def multi_continuously_play_games(self, num_coroutines: int):
         # We need to call this in here so that uvloop has had a chance to set the event loop first.
-        self.inference_client.init_in_process(asyncio.get_event_loop())
+        for client in self.inference_clients.values():
+            client.init_in_process(asyncio.get_event_loop())
 
         await asyncio.gather(
             *[self.continuously_play_games() for _ in range(num_coroutines)]

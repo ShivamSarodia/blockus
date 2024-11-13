@@ -7,16 +7,11 @@ from state import State
 import player_pov_helpers
 from data_recorder import DataRecorder
 from inference.client import InferenceClient
+from event_logger import log_event
 
 
 NUM_MOVES = config()["game"]["num_moves"]
-FULL_MOVE_PROBABILITY = config()["mcts"]["full_move_probability"]
-FULL_MOVE_ROLLOUTS = config()["mcts"]["full_move_rollouts"]
-FAST_MOVE_ROLLOUTS = config()["mcts"]["fast_move_rollouts"]
-
-UCB_EXPLORATION = config()["mcts"]["ucb_exploration"]
-ROOT_EXPLORATION_FRACTION = config()["mcts"]["root_exploration_fraction"]
-ROOT_DIRICHLET_ALPHA = config()["mcts"]["root_dirichlet_alpha"]
+LOG_MCTS_REPORT_FRACTION = config()["development"]["log_mcts_report_fraction"]
 
 
 def softmax(x):
@@ -27,20 +22,27 @@ def softmax(x):
 class MCTSAgent:
     def __init__(
             self,
+            config: Dict,
             inference_client: InferenceClient,
             data_recorder: DataRecorder,
             recorder_game_id: int,
         ):
+        self.mcts_config = config
         self.inference_client = inference_client
         self.data_recorder = data_recorder
         self.recorder_game_id = recorder_game_id
 
     async def select_move_index(self, state: State):
-        is_full_move = random.random() < FULL_MOVE_PROBABILITY
-        num_rollouts = FULL_MOVE_ROLLOUTS if is_full_move else FAST_MOVE_ROLLOUTS
+        is_full_move = random.random() < self.mcts_config["full_move_probability"]
+        num_rollouts = self.mcts_config["full_move_rollouts"] if is_full_move else self.mcts_config["fast_move_rollouts"]
 
-        search_root = MCTSValuesNode()
+        search_root = MCTSValuesNode(self.mcts_config)
         await search_root.get_value_and_expand_children(state, self.inference_client)
+
+        if is_full_move:
+            # Add noise on full moves to improve our observed policy distribution,
+            # but not on fast moves.
+            search_root.add_noise()
 
         for _ in range(num_rollouts):
             scratch_state = state.clone()
@@ -73,7 +75,7 @@ class MCTSAgent:
             if game_over:
                 value = scratch_state.result()
             else:
-                new_node = MCTSValuesNode()
+                new_node = MCTSValuesNode(self.mcts_config)
                 value = await new_node.get_value_and_expand_children(scratch_state, self.inference_client)
                 nodes_visited[-1].move_index_to_child_node[moves_played[-1]] = new_node
 
@@ -104,7 +106,9 @@ class MCTSAgent:
     
 
 class MCTSValuesNode:
-    def __init__(self):
+    def __init__(self, mcts_config):
+        self.mcts_config = mcts_config
+
         # These values are all populated when get_value_and_expand_children is called.
 
         # Number of valid moves from the state associated with this node.
@@ -130,11 +134,11 @@ class MCTSValuesNode:
         # This populates over time only as nodes are visited.
         self.move_index_to_child_node: Dict[int, MCTSValuesNode] = {}
 
-    def select_child_by_ucb(self, state: State):
+    def _exploitation_scores(self, player):
         # Exploitation scores are between 0 and 1. 0 means the player has lost every game from this move,
-        # 1 means the player has won every game from this move.
+        # 1 means the player has won every game from this move.        
         exploitation_scores = np.divide(
-            self.children_value_sums[state.player],
+            self.children_value_sums[player],
             self.children_visit_counts,
             where=(self.children_visit_counts != 0)
         )
@@ -147,15 +151,24 @@ class MCTSValuesNode:
         #
         # We should probably tune this a bit. For example, as we explore more children of this node, we could
         # weigh their results more heavily here.
-        exploitation_scores[self.children_visit_counts == 0] = self.values[state.player]
+        exploitation_scores[self.children_visit_counts == 0] = self.values[player]
 
+        return exploitation_scores
+
+    def _exploration_scores(self):
         # Followed this: https://aaowens.github.io/blog_mcts.html
         sqrt_total_visit_count = np.sqrt(np.sum(self.children_visit_counts) + 1)
 
         # Children priors are normalized to add up to 1.
-        exploration_scores = (
-            UCB_EXPLORATION * self.children_priors * sqrt_total_visit_count / (1 + self.children_visit_counts)
+        return (
+            self.mcts_config["ucb_exploration"] * self.children_priors * sqrt_total_visit_count /
+            (1 + self.children_visit_counts)
         )
+
+    def select_child_by_ucb(self, state: State):
+        exploitation_scores = self._exploitation_scores(state.player)
+        exploration_scores = self._exploration_scores()
+        
         ucb_scores = exploitation_scores + exploration_scores
 
         move_index_selected = self.array_index_to_move_index[np.argmax(ucb_scores)]
@@ -208,11 +221,28 @@ class MCTSValuesNode:
         return self.values
 
     def get_move_index_to_play(self, state: State):
+        if random.random() < LOG_MCTS_REPORT_FRACTION:
+            log_event(
+                "mcts_report",
+                {
+                    "board": state.occupancies.tolist(),
+                    "children_visit_counts": self.children_visit_counts.tolist(),
+                    "children_value_sums": self.children_value_sums.tolist(),
+                    "children_priors": self.children_priors.tolist(),
+                    "values": self.values.tolist(),
+                }
+            )
+
         probabilities = softmax(self.children_visit_counts)
         probabilities /= np.sum(probabilities)
 
         return self.array_index_to_move_index[np.random.choice(len(probabilities), p=probabilities)]
     
     def add_noise(self):
-        self.children_priors = (1 - ROOT_EXPLORATION_FRACTION) * self.children_priors + \
-            ROOT_EXPLORATION_FRACTION * np.random.gamma(ROOT_DIRICHLET_ALPHA, 1, NUM_MOVES)
+        total_dirichlet_alpha = self.mcts_config["total_dirichlet_alpha"]
+        noise = np.random.dirichlet([total_dirichlet_alpha / self.num_valid_moves] * self.num_valid_moves)
+        root_exploration_fraction = self.mcts_config["root_exploration_fraction"]
+        self.children_priors = (
+            (1 - root_exploration_fraction) * self.children_priors +
+            root_exploration_fraction * noise
+        )

@@ -8,11 +8,11 @@ import asyncio
 from configuration import config
 from inference.actor import InferenceActor
 
-INFERENCE_CLIENT_BATCH_SIZE = config()["architecture"]["inference_batch_size"]
 BOARD_SIZE = config()["game"]["board_size"]
 
 class InferenceClient:
-    def __init__(self, actor: InferenceActor):
+    def __init__(self, actor: InferenceActor, batch_size: int):
+        self.batch_size = batch_size
         self.actor = actor
         
         # This fills up as evaluation requests come in. When full, we submit to
@@ -46,7 +46,7 @@ class InferenceClient:
 
         # Check if we're ready to evaluate the batch based on the batch size and the
         # number of evaluations currently waiting on cached values.
-        if len(self.evaluation_batch) >= INFERENCE_CLIENT_BATCH_SIZE:
+        if len(self.evaluation_batch) >= self.batch_size:
             evaluation_params = self._fetch_and_clear_evaluation_params()
             await self._evaluate_batch(*evaluation_params)
 

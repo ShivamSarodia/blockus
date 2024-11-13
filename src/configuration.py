@@ -1,7 +1,8 @@
 import os
 import numpy as np
-import tomllib
+import yaml
 import json
+import copy
 
 _CONFIG = None
 _MOVES = None
@@ -27,7 +28,7 @@ def _load_config():
 
     for config_path in config_paths:
         with open(config_path, "rb") as f:
-            config_level = tomllib.load(f)
+            config_level = yaml.safe_load(f)
             merge_into_dict(config, config_level)
 
     # Now, apply each override to the config.
@@ -40,6 +41,17 @@ def _load_config():
         
         assert keys[-1] in current, "Override key not found in config: " + override
         current[keys[-1]] = json.loads(value)
+
+    # Finally, generate a completed list of agent configurations from the original config.
+    default_agent = config["default_agent"]
+    config["agents"] = []
+    for individual_agent in config["individual_agents"]:
+        agent = copy.deepcopy(default_agent)
+        merge_into_dict(agent, individual_agent)
+        config["agents"].append(agent)
+
+    del config["default_agent"]
+    del config["individual_agents"]
 
     _CONFIG = config
     print("Loaded config: ", json.dumps(_CONFIG))
