@@ -31,7 +31,8 @@ class DataRecorder:
             "occupancies": [],
             "policies": [],
             "players": [],
-            "values": []
+            "values": [],
+            "game_ids": [],
         }
         return game_id
 
