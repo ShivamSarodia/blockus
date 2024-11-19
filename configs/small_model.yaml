@@ -22,8 +22,13 @@ networks:
     value_head_flat_layer_width: 64
     policy_head_channels: 64
     residual_blocks: 8
+
+    # One of model_path and model_directory should be specified.
     model_path: "data/2024-11-11_13-31-42-gasterolichenes/trained_model.pth"
-    # TODO: We want a better way to set this probably?
+    model_directory: ""
+
+    # Frequency to check if there's a new model to load from disk.
+    new_model_check_interval: 120
     batch_size: 128
 
 default_agent:

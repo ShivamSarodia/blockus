@@ -8,7 +8,7 @@ import player_pov_helpers
 from state import State
 
 class DataRecorder:
-    def __init__(self, directory, game_flush_threshold=10):
+    def __init__(self, directory, game_flush_threshold=100):
         self.game_flush_threshold = game_flush_threshold
 
         self.directory = os.path.join(directory, "games/")

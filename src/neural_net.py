@@ -6,7 +6,6 @@
 
 from typing import Dict
 
-import torch
 from torch import nn
 import torch.nn.functional as F
 
@@ -52,7 +51,7 @@ class ResidualBlock(nn.Module):
         return F.relu(x + self.convolutional_block(x))
 
 class NeuralNet(nn.Module):
-    def __init__(self, net_config: Dict, load_model=True):
+    def __init__(self, net_config: Dict):
         super().__init__()
         
         self.convolutional_block = nn.Sequential(
@@ -104,13 +103,9 @@ class NeuralNet(nn.Module):
             ),
         )
 
-        if load_model:
-            model_path = net_config["model_path"]
-            self.load_state_dict(torch.load(model_path))
-            print(f"Loaded model from file: {model_path}")
-
     def forward(self, occupancies):
         x = self.convolutional_block(occupancies)
         for residual_block in self.residual_blocks:
             x = residual_block(x)
         return self.value_head(x), self.policy_head(x)
+       

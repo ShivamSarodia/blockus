@@ -2,6 +2,7 @@ import numpy as np
 import ray
 from typing import Tuple
 import torch
+import os
 import time
 from typing import Dict
 
@@ -15,13 +16,22 @@ BOARD_SIZE = config()["game"]["board_size"]
 class InferenceActor:
     def __init__(self, network_config: Dict) -> None:
         self.network_config = network_config
-        self.model = NeuralNet(network_config).to("mps")
+
+        self.model = None
+        self.model_path = None
+        self.last_checked_for_new_model = 0
+
+        self._maybe_load_model()
     
     def evaluate_batch(self, boards) -> Tuple[np.ndarray, np.ndarray]:
-        # Include an extra .copy() here so we don't get a scary PyTorch warning about 
-        # non-writeable tensors.
+        # Load the model if it's been more than 5 minutes since we last loaded it.
+        if self.model_last_loaded is None or time.time() - self.model_last_loaded > 300:
+            self._load_model()
+
         start_evaluation = time.perf_counter()
 
+        # Include an extra .copy() here so we don't get a scary PyTorch warning about 
+        # non-writeable tensors.
         boards_tensor = torch.from_numpy(boards.copy()).to(dtype=torch.float, device="mps")
         with torch.inference_mode():
             values_logits_tensor, policy_logits_tensor = self.model(boards_tensor)
@@ -35,3 +45,48 @@ class InferenceActor:
         })
 
         return values, policy_logits
+    
+    def _maybe_load_model(self):
+        # First, if it hasn't been long enough since we last checked for a new model,
+        # don't check again.
+        current_time = time.time()
+        time_since_last_check = current_time - self.last_checked_for_new_model
+        self.last_checked_for_new_model = current_time
+        if time_since_last_check < self.network_config["new_model_check_interval"]:
+            return
+        
+        # Next, find the path of the latest model. If it's the same as the latest model
+        # don't reload it.
+        latest_model_path = self._find_latest_model_path()
+        if latest_model_path == self.model_path:
+            return 
+        
+        # Finally, we have a new model to load!
+        self._load_model(latest_model_path)
+
+    def _find_latest_model_path(self):
+        # If a path is specified in the config, just use that.
+        if self.network_config["model_path"]:
+            return self.network_config["model_path"]
+
+        # Otherwise, look up the latest model in a directory.
+        model_dir = self.network_config["model_directory"]
+        model_paths = [
+            os.path.join(model_dir, filename)
+            for filename in os.listdir(model_dir)
+            if (
+                os.path.isfile(os.path.join(model_dir, filename)) and 
+                filename.endswith(".pt")
+            )
+        ]
+        return max(model_paths)
+    
+    def _load_model(self, path):
+        self.model = NeuralNet(self.network_config).to("mps")
+        self.model.load_state_dict(torch.load(path))
+        self.model_path = path
+        self.model.eval()
+        log_event(
+            "loaded_model",
+            { "model_path": path }
+        )
