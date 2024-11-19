@@ -225,10 +225,12 @@ class MCTSValuesNode:
             log_event(
                 "mcts_report",
                 {
+                    "player": state.player,
                     "board": state.occupancies.tolist(),
                     "children_visit_counts": self.children_visit_counts.tolist(),
                     "children_value_sums": self.children_value_sums.tolist(),
                     "children_priors": self.children_priors.tolist(),
+                    "array_index_to_move_index": self.array_index_to_move_index.tolist(),
                     "values": self.values.tolist(),
                 }
             )

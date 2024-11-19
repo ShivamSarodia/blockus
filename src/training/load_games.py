@@ -1,4 +1,5 @@
 import os
+from zipfile import BadZipFile
 import torch
 import numpy as np
 
@@ -32,11 +33,14 @@ def _load_from_paths(game_file_paths):
 
     for game_file in game_file_paths:
         with open(game_file, "rb") as f:
-            npz = np.load(f)
-            occupancies.append(npz["occupancies"])
-            policies.append(npz["policies"])
-            values.append(npz["values"])
-            game_ids.append(npz["game_ids"])
+            try:
+                npz = np.load(f)
+                occupancies.append(npz["occupancies"])
+                policies.append(npz["policies"])
+                values.append(npz["values"])
+                game_ids.append(npz["game_ids"])
+            except BadZipFile:
+                print(f"Bad zip file: {game_file}")
 
     return (
         torch.Tensor(np.concatenate(occupancies)),

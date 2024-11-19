@@ -53,8 +53,8 @@ class GameplayActor:
     async def play_game(self):
         recorder_game_id = self.data_recorder.start_game()
 
-        # Shuffle the agents randomly.
-        agent_configs = random.sample(AGENTS, k=len(AGENTS))
+        # Select four agents (without replacement)
+        agent_configs = random.sample(AGENTS, k=4)
 
         agents = []
         for agent_config in agent_configs:
