@@ -1,7 +1,7 @@
 development:
   debug_mode: true
   profile: false
-  runtime: 32400
+  runtime: 3600
   display_logs_in_console: false
   output_directory: "data/"
   log_mcts_report_fraction: 0.01

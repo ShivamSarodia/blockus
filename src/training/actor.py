@@ -13,12 +13,13 @@ from configuration import config
 from training.load_games import load_games
 
 TRAINING_RUN = config()["training"]["run"]
-NETWORK_NAME = config()["training"]["network_name"]
-NETWORK_CONFIG = config()["networks"][NETWORK_NAME]
-NEW_DATA_CHECK_INTERVAL = config()["training"]["new_data_check_interval"]
-BATCH_SIZE = config()["training"]["batch_size"]
-POLICY_LOSS_WEIGHT = config()["training"]["policy_loss_weight"]
-LEARNING_RATE = config()["training"]["learning_rate"]
+if TRAINING_RUN:
+    NETWORK_NAME = config()["training"]["network_name"]
+    NETWORK_CONFIG = config()["networks"][NETWORK_NAME]
+    NEW_DATA_CHECK_INTERVAL = config()["training"]["new_data_check_interval"]
+    BATCH_SIZE = config()["training"]["batch_size"]
+    POLICY_LOSS_WEIGHT = config()["training"]["policy_loss_weight"]
+    LEARNING_RATE = config()["training"]["learning_rate"]
 
 @ray.remote
 class TrainingActor:
