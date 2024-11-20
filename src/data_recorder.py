@@ -1,16 +1,16 @@
 import time
 import os
 import numpy as np
-import pickle
 import random
 
+from configuration import config
 import player_pov_helpers
 from state import State
 
-class DataRecorder:
-    def __init__(self, directory, game_flush_threshold=100):
-        self.game_flush_threshold = game_flush_threshold
+GAME_FLUSH_THRESHOLD = config()["architecture"]["game_flush_threshold"]
 
+class DataRecorder:
+    def __init__(self, directory):
         self.directory = os.path.join(directory, "games/")
         os.makedirs(self.directory, exist_ok=True)
 
@@ -56,10 +56,7 @@ class DataRecorder:
         for player in game["players"]:
             game["values"].append(player_pov_helpers.values_to_player_pov(values, player))
         self.finished_games.add(game_id)
-
-        print("Finished a game!")
-
-        if len(self.finished_games) > self.game_flush_threshold:
+        if len(self.finished_games) >= GAME_FLUSH_THRESHOLD:
             self.flush()
 
     def flush(self):
@@ -84,7 +81,6 @@ class DataRecorder:
         self.finished_games = set()
 
         if not game_ids:
-            print("No complete games recorded.")
             return
         
         game_ids = np.concatenate(game_ids)

@@ -19,6 +19,7 @@ from event_logger import log_event
 USE_PROFILER = config()["development"]["profile"]
 COROUTINES_PER_PROCESS = config()["architecture"]["coroutines_per_process"]
 AGENTS = config()["agents"]
+LOG_MADE_MOVE = config()["logging"]["made_move"]
 
 @ray.remote
 class GameplayActor:
@@ -77,7 +78,8 @@ class GameplayActor:
             agent = agents[state.player]
             move_index = await agent.select_move_index(state)
             game_over = state.play_move(move_index)
-            log_event("made_move")
+            if LOG_MADE_MOVE:
+                log_event("made_move")
         
         result = state.result()
         log_event("game_result", [

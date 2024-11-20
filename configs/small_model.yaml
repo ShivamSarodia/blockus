@@ -4,7 +4,11 @@ development:
   runtime: 36000
   display_logs_in_console: false
   output_directory: "data/2024-11-19_08-38-28-extracted"
-  log_mcts_report_fraction: 0.01
+
+logging:
+  mcts_report_fraction: 0.001
+  gpu_evaluation: true
+  made_move: true
 
 game:
   board_size: 10
@@ -15,6 +19,9 @@ architecture:
   gameplay_processes: 6
   coroutines_per_process: 256
 
+  # Number of games to accumulate before they're flushed to disk.
+  game_flush_threshold: 200
+
 networks:
   default:
     main_body_channels: 64
@@ -24,8 +31,8 @@ networks:
     residual_blocks: 8
 
     # One of model_path or model_directory should be specified.
-    model_path: "data/2024-11-11_13-31-42-gasterolichenes/trained_model.pth"
-    model_directory: ""
+    model_path: ""
+    model_directory: "data/2024-11-19_08-38-28-extracted/models/"
 
     # Frequency to check if there's a new model to load from disk.
     new_model_check_interval: 120
@@ -33,7 +40,7 @@ networks:
 
 training:
   run: true
-  network: "default"
+  network_name: "default"
   batch_size: 64
 
   policy_loss_weight: 0.158

@@ -11,6 +11,7 @@ from neural_net import NeuralNet
 from event_logger import log_event
 
 BOARD_SIZE = config()["game"]["board_size"]
+LOG_GPU_EVALUATION = config()["logging"]["gpu_evaluation"]
 
 @ray.remote
 class InferenceActor:
@@ -24,9 +25,7 @@ class InferenceActor:
         self._maybe_load_model()
     
     def evaluate_batch(self, boards) -> Tuple[np.ndarray, np.ndarray]:
-        # Load the model if it's been more than 5 minutes since we last loaded it.
-        if self.model_last_loaded is None or time.time() - self.model_last_loaded > 300:
-            self._load_model()
+        self._maybe_load_model()
 
         start_evaluation = time.perf_counter()
 
@@ -39,10 +38,11 @@ class InferenceActor:
         values = torch.softmax(values_logits_tensor, dim=1).cpu().numpy()
         policy_logits = policy_logits_tensor.cpu().numpy()
 
-        log_event("gpu_evaluation", {
-            "duration": time.perf_counter() - start_evaluation,
-            "batch_size": boards.shape[0],
-        })
+        if LOG_GPU_EVALUATION:
+            log_event("gpu_evaluation", {
+                "duration": time.perf_counter() - start_evaluation,
+                "batch_size": boards.shape[0],
+            })
 
         return values, policy_logits
     
@@ -51,14 +51,17 @@ class InferenceActor:
         # don't check again.
         current_time = time.time()
         time_since_last_check = current_time - self.last_checked_for_new_model
-        self.last_checked_for_new_model = current_time
         if time_since_last_check < self.network_config["new_model_check_interval"]:
             return
+        
+        # Ok, we're gonna actually check for a new model.
+        self.last_checked_for_new_model = current_time
         
         # Next, find the path of the latest model. If it's the same as the latest model
         # don't reload it.
         latest_model_path = self._find_latest_model_path()
         if latest_model_path == self.model_path:
+            log_event("no_new_model")
             return 
         
         # Finally, we have a new model to load!
@@ -83,7 +86,7 @@ class InferenceActor:
     
     def _load_model(self, path):
         self.model = NeuralNet(self.network_config).to("mps")
-        self.model.load_state_dict(torch.load(path))
+        self.model.load_state_dict(torch.load(path, weights_only=True))
         self.model_path = path
         self.model.eval()
         log_event(

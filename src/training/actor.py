@@ -2,7 +2,7 @@ import ray
 import os
 import time
 import torch
-import datetime
+from datetime import datetime
 from typing import Dict
 from torch import nn
 from torch.utils.data import TensorDataset, DataLoader
@@ -37,7 +37,7 @@ class TrainingActor:
         # Start by loading the base version of the model to train.
         # This is the latest model in the model directory.
         model = NeuralNet(NETWORK_CONFIG)
-        model.load_state_dict(torch.load(self._find_latest_model_path()))
+        model.load_state_dict(torch.load(self._find_latest_model_path(), weights_only=True))
         model.train()
 
         optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
@@ -61,7 +61,11 @@ class TrainingActor:
                 "num_samples": len(boards),
             })
 
-            dataset = TensorDataset(boards, policies, values)
+            dataset = TensorDataset(
+                torch.Tensor(boards),
+                torch.Tensor(policies),
+                torch.Tensor(values)
+            )
             dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
 
             # Train the network on the new data.
@@ -105,14 +109,19 @@ class TrainingActor:
         gamedata_paths = [
             os.path.join(self.gamedata_path, filename)
             for filename in os.listdir(self.gamedata_path)
-            if filename.endswith(".pt")
+            if filename.endswith(".npz")
         ]
 
         # Select the game data files that haven't been read yet.
-        return [
+        unread_paths = [
             path for path in gamedata_paths
             if path > self.last_read_game_file_path
         ]
+
+        if unread_paths:
+            self.last_read_game_file_path = max(unread_paths)
+
+        return unread_paths
 
     def _find_latest_model_path(self):
         # TODO: DRY this with the same method in inference/actor.py

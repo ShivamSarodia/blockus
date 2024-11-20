@@ -48,8 +48,9 @@ def run():
 
     # If we're supposed to be training, start the Ray actor that trains the network.
     if TRAINING_RUN:
-        print("Starting training actor...")
-        training_actor = TrainingActor.remote(output_data_dir)
+        gamedata_path = os.path.join(output_data_dir, "games/")
+        print(f"Starting training actor reading from {gamedata_path}...")
+        training_actor = TrainingActor.remote(gamedata_path)
         training_actor.run.remote()
 
     # Now, start Ray actors that run gameplay.

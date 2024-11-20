@@ -11,7 +11,7 @@ from event_logger import log_event
 
 
 NUM_MOVES = config()["game"]["num_moves"]
-LOG_MCTS_REPORT_FRACTION = config()["development"]["log_mcts_report_fraction"]
+LOG_MCTS_REPORT_FRACTION = config()["logging"]["mcts_report_fraction"]
 
 
 def softmax(x):
