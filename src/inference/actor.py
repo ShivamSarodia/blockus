@@ -88,5 +88,5 @@ class InferenceActor:
         self.model.eval()
         log_event(
             "loaded_model",
-            { "model_path": path }
+            { "model_name": path.split("/")[-1].split(".")[0] }
         )

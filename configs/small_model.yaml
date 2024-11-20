@@ -3,7 +3,7 @@ development:
   profile: false
   runtime: 36000
   display_logs_in_console: false
-  output_directory: "data/"
+  output_directory: "data/2024-11-19_08-38-28-extracted"
   log_mcts_report_fraction: 0.01
 
 game:
@@ -23,13 +23,24 @@ networks:
     policy_head_channels: 64
     residual_blocks: 8
 
-    # One of model_path and model_directory should be specified.
+    # One of model_path or model_directory should be specified.
     model_path: "data/2024-11-11_13-31-42-gasterolichenes/trained_model.pth"
     model_directory: ""
 
     # Frequency to check if there's a new model to load from disk.
     new_model_check_interval: 120
     batch_size: 128
+
+training:
+  run: true
+  network: "default"
+  batch_size: 64
+
+  policy_loss_weight: 0.158
+  learning_rate: 1.0e-3
+
+  # Frequency to check if there's new data to train on.
+  new_data_check_interval: 120
 
 default_agent:
   mcts:

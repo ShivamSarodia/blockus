@@ -8,6 +8,7 @@ import json
 from configuration import config
 from inference.client import InferenceClient
 from inference.actor import InferenceActor
+from training.actor import TrainingActor
 from gameplay_actor import GameplayActor
 from datetime import datetime, timedelta
 
@@ -20,6 +21,7 @@ NUM_MOVES = config()["game"]["num_moves"]
 GAMEPLAY_PROCESSES = config()["architecture"]["gameplay_processes"]
 COROUTINES_PER_PROCESS = config()["architecture"]["coroutines_per_process"]
 NETWORKS = config()["networks"]
+TRAINING_RUN = config()["training"]["run"]
 
 
 def run():
@@ -43,6 +45,12 @@ def run():
         print(f"Starting inference actor for network '{network_name}'...")
         inference_actor = InferenceActor.remote(network_config)
         inference_clients[network_name] = InferenceClient(inference_actor, network_config["batch_size"])
+
+    # If we're supposed to be training, start the Ray actor that trains the network.
+    if TRAINING_RUN:
+        print("Starting training actor...")
+        training_actor = TrainingActor.remote(output_data_dir)
+        training_actor.run.remote()
 
     # Now, start Ray actors that run gameplay.
     gameplay_actors = [
@@ -74,23 +82,25 @@ def run():
 
         print("Exiting.")
 
-def generate_output_data_dir():
+def _get_timestamp_word():
     random_word = subprocess.run(
         "sort -R /usr/share/dict/words | head -n 1 | tr '[:upper:]' '[:lower:]'",
         shell=True,
         capture_output = True,
         text=True,
-    ).stdout.strip()
-    output_data_dir = os.path.join(
-        BASE_OUTPUT_DIRECTORY,
-        f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}-{random_word}/"
-    )
-    print(f"\033[94m\033[1mOUTPUT DATA DIRECTORY: {output_data_dir}\033[0m")
-    os.makedirs(output_data_dir, exist_ok=True)
-    return output_data_dir
+    ).stdout.strip()    
+    return f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')}-{random_word}"
+
+def generate_output_data_dir():
+    print(f"\033[94m\033[1mOUTPUT DATA DIRECTORY: {BASE_OUTPUT_DIRECTORY}\033[0m")
+    os.makedirs(BASE_OUTPUT_DIRECTORY, exist_ok=True)
+    return BASE_OUTPUT_DIRECTORY
 
 def copy_ray_logs(output_data_dir):
-    output_file_path = os.path.join(output_data_dir, "logs.txt")
+    output_file_path = os.path.join(
+        output_data_dir,
+        f"logs_{_get_timestamp_word()}.txt",
+    )
     print(f"Copying Ray logs...")
     with open(output_file_path, "w") as output_file:
         subprocess.run(

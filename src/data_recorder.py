@@ -86,11 +86,19 @@ class DataRecorder:
         if not game_ids:
             print("No complete games recorded.")
             return
+        
+        game_ids = np.concatenate(game_ids)
+        occupancies = np.concatenate(occupancies)
+        policies = np.concatenate(policies)
+        values = np.concatenate(values)
 
+        # Save the files to disk with the number of samples included, so that the
+        # training script can tell from just the filename how many samples are in
+        # the file.
         np.savez(
-            os.path.join(self.directory, f"{int(time.time() * 1000)}.npz"),
-            game_ids=np.concatenate(game_ids),
-            occupancies=np.concatenate(occupancies),
-            policies=np.concatenate(policies),
-            values=np.concatenate(values)
+            os.path.join(self.directory, f"{int(time.time() * 1000)}_{len(game_ids)}.npz"),
+            game_ids=game_ids,
+            occupancies=occupancies,
+            policies=policies,
+            values=values,
         )

@@ -1,31 +1,9 @@
-import os
 from zipfile import BadZipFile
-import torch
 import numpy as np
+from event_logger import log_event
 
 
-def load_games(games_directory, test_fraction=0.1):
-    game_file_paths = [
-        os.path.join(games_directory, game_file)
-        for game_file in os.listdir(games_directory)
-    ]
-
-    # TODO: Instead of splitting by file, load everything and then split by 
-    # game ID?
-
-    num_test_files = round(len(game_file_paths) * test_fraction)
-    print(f"Reserving {num_test_files} files for testing.")
-
-    train_data = _load_from_paths(game_file_paths[:-num_test_files])
-    test_data = _load_from_paths(game_file_paths[-num_test_files:])
-
-    print(f"Loaded {len(train_data[0])} training samples.")
-    print(f"Loaded {len(test_data[0])} testing samples.")
-
-    return train_data, test_data
-
-
-def _load_from_paths(game_file_paths):
+def load_games(game_file_paths):
     occupancies = []
     policies = []
     values = []
@@ -40,10 +18,10 @@ def _load_from_paths(game_file_paths):
                 values.append(npz["values"])
                 game_ids.append(npz["game_ids"])
             except BadZipFile:
-                print(f"Bad zip file: {game_file}")
+                log_event("bad_game_file", {"path": game_file})
 
     return (
-        torch.Tensor(np.concatenate(occupancies)),
-        torch.Tensor(np.concatenate(policies)),
-        torch.Tensor(np.concatenate(values)),
+        np.concatenate(occupancies),
+        np.concatenate(policies),
+        np.concatenate(values),
     )
