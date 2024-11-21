@@ -6,6 +6,7 @@ development:
   output_directory: "data/2024-11-19_08-38-28-extracted"
 
 logging:
+  save_interval: 3600
   mcts_report_fraction: 0.001
   gpu_evaluation: true
   made_move: true

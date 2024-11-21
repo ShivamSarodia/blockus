@@ -1,11 +1,12 @@
 development:
   debug_mode: true
   profile: false
-  runtime: 1440
+  runtime: 3600
   display_logs_in_console: false
-  output_directory: "data/2024-11-20_10_42_39-supine"
+  output_directory: "data/2024-11-20_14-10-24-survival"
 
 logging:
+  save_interval: 120
   mcts_report_fraction: 0
   gpu_evaluation: true
   made_move: true
@@ -24,44 +25,89 @@ architecture:
   game_flush_threshold: 1.0e+9
 
 networks:
-  default:
+  s0:
     main_body_channels: 64
     value_head_channels: 16
     value_head_flat_layer_width: 64
     policy_head_channels: 64
     residual_blocks: 8
 
-    model_path: "data/2024-11-20_10_42_39-supine/model/2024-11-20_09-34-23_478500.pt"
+    model_path: "data/2024-11-20_14-10-24-survival/models/0_s0.pt"
 
-    batch_size: 64
+    batch_size: 16
 
     # Frequency to check if there's a new model to load from disk.
     # Very large value here so we don't worry about loading new models.
     new_model_check_interval: 1.0e+9
+
+  s105769:
+    main_body_channels: 64
+    value_head_channels: 16
+    value_head_flat_layer_width: 64
+    policy_head_channels: 64
+    residual_blocks: 8
+
+    model_path: "data/2024-11-20_14-10-24-survival/models/2024-11-20_02-24-48_055438_s105769.pt"
+
+    batch_size: 16
+
+    # Frequency to check if there's a new model to load from disk.
+    # Very large value here so we don't worry about loading new models.
+    new_model_check_interval: 1.0e+9
+
+  s208119:
+    main_body_channels: 64
+    value_head_channels: 16
+    value_head_flat_layer_width: 64
+    policy_head_channels: 64
+    residual_blocks: 8
+
+    model_path: "data/2024-11-20_14-10-24-survival/models/2024-11-20_05-55-34_563027_s208119.pt"
+
+    batch_size: 16
+
+    # Frequency to check if there's a new model to load from disk.
+    # Very large value here so we don't worry about loading new models.
+    new_model_check_interval: 1.0e+9
+
+  s313486:
+    main_body_channels: 64
+    value_head_channels: 16
+    value_head_flat_layer_width: 64
+    policy_head_channels: 64
+    residual_blocks: 8
+
+    model_path: "data/2024-11-20_14-10-24-survival/models/2024-11-20_09-34-23_478500_s313486.pt"
+
+    batch_size: 16
+
+    # Frequency to check if there's a new model to load from disk.
+    # Very large value here so we don't worry about loading new models.
+    new_model_check_interval: 1.0e+9        
 
 training:
   run: false
 
 default_agent:
   mcts:
-    network: "default"
+    network: "placeholder to override"
     full_move_probability: 1.0
     full_move_rollouts: 500
     fast_move_rollouts: "never used"
     ucb_exploration: 1.4
     total_dirichlet_alpha: 10.83
-    root_exploration_fraction: "placeholder to override"
+    root_exploration_fraction: 0.08
 
 individual_agents:
-  - name: "root_exploration_fraction_0"
+  - name: "s0"
     mcts:
-      root_exploration_fraction: 0.0
-  - name: "root_exploration_fraction_08"
+      network: "s0"
+  - name: "s105769"
     mcts:
-      root_exploration_fraction: 0.08
-  - name: "root_exploration_fraction_16"
+      network: "s105769"
+  - name: "s208119"
     mcts:
-      root_exploration_fraction: 0.16
-  - name: "root_exploration_fraction_25"
+      network: "s208119"
+  - name: "s313486"
     mcts:
-      root_exploration_fraction: 0.25
+      network: "s313486"

@@ -2,6 +2,7 @@ import ray
 import time
 import subprocess
 import ray.exceptions
+import traceback
 import os
 import json
 
@@ -14,6 +15,7 @@ from datetime import datetime, timedelta
 
 
 RUNTIME = config()["development"]["runtime"]
+LOG_SAVE_INTERVAL = config()["logging"]["save_interval"]
 BASE_OUTPUT_DIRECTORY = config()["development"]["output_directory"]
 DISPLAY_LOGS_IN_CONSOLE = config()["development"]["display_logs_in_console"]
 BOARD_SIZE = config()["game"]["board_size"]
@@ -58,16 +60,36 @@ def run():
         GameplayActor.remote(inference_clients, output_data_dir)
         for _ in range(GAMEPLAY_PROCESSES)
     ]
+    for gameplay_actor in gameplay_actors:
+        gameplay_actor.run.remote()
 
-    # Blocks indefinitely, because gameplay actor never finishes.
+    finish_time = (datetime.now() + timedelta(seconds=RUNTIME)).strftime("%I:%M:%S %p")
+    print(f"Running for {RUNTIME} seconds, finishing at {finish_time}...")
+
+    # Finally, run the main loop.
+    start_time = time.time()
+    logs_last_copied = start_time
+
     try:
-        finish_time = (datetime.now() + timedelta(seconds=RUNTIME)).strftime("%I:%M:%S %p")
-        print(f"Starting gameplay actors, running for {RUNTIME} seconds, finishing at {finish_time}...")
-        ray.get(
-            [gameplay_actor.run.remote() for gameplay_actor in gameplay_actors],
-            timeout=RUNTIME,
-        )
-    except (KeyboardInterrupt, ray.exceptions.GetTimeoutError):
+        while True:
+            current_time = time.time()
+
+            # If it's time to wrap up, break.
+            if current_time > start_time + RUNTIME:
+                break
+
+            # If it's been a while since the logs were copied, copy them now.
+            if current_time > logs_last_copied + LOG_SAVE_INTERVAL:
+                copy_ray_logs(output_data_dir)
+                logs_last_copied = current_time
+
+            # Sleep 60 seconds before checking again.
+            time.sleep(60)
+
+    except KeyboardInterrupt:
+        print("Got KeyboardInterrupt...")
+
+    finally:
         print("Shutting down...")
         print("Cleaning up gameplay actors...")
         ray.get([
@@ -77,20 +99,8 @@ def run():
         print("Shutting down Ray...")
         ray.shutdown()
         time.sleep(1)
-        print("Done shutting down Ray.")
-
-        copy_ray_logs(output_data_dir)
-
+        print("Done shutting down Ray.")        
         print("Exiting.")
-
-def _get_timestamp_word():
-    random_word = subprocess.run(
-        "sort -R /usr/share/dict/words | head -n 1 | tr '[:upper:]' '[:lower:]'",
-        shell=True,
-        capture_output = True,
-        text=True,
-    ).stdout.strip()    
-    return f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')}-{random_word}"
 
 def generate_output_data_dir():
     print(f"\033[94m\033[1mOUTPUT DATA DIRECTORY: {BASE_OUTPUT_DIRECTORY}\033[0m")
@@ -100,7 +110,7 @@ def generate_output_data_dir():
 def copy_ray_logs(output_data_dir):
     output_file_path = os.path.join(
         output_data_dir,
-        f"logs_{_get_timestamp_word()}.txt",
+        f"logs_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')}.txt",
     )
     print(f"Copying Ray logs...")
     with open(output_file_path, "w") as output_file:
