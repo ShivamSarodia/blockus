@@ -99,7 +99,8 @@ def run():
         print("Shutting down Ray...")
         ray.shutdown()
         time.sleep(1)
-        print("Done shutting down Ray.")        
+        print("Done shutting down Ray.")       
+        copy_ray_logs(output_data_dir) 
         print("Exiting.")
 
 def generate_output_data_dir():
