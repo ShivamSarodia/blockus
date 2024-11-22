@@ -12,6 +12,7 @@ from event_logger import log_event
 
 NUM_MOVES = config()["game"]["num_moves"]
 LOG_MCTS_REPORT_FRACTION = config()["logging"]["mcts_report_fraction"]
+LOG_UCB_REPORT = config()["logging"]["ucb_report"]
 
 
 def softmax(x):
@@ -47,7 +48,7 @@ class MCTSAgent:
         for _ in range(num_rollouts):
             scratch_state = state.clone()
 
-            # At the start of each iteration, nodes_visited will be one 
+            # At the start of each iteration, nodes_visited will be one
             # longer than moves_played. moves_played[i] is the move played
             # to exit nodes_visited[i].
             nodes_visited = [search_root]
@@ -83,12 +84,12 @@ class MCTSAgent:
             for i in range(len(nodes_visited)):
                 node = nodes_visited[i]
                 node_array_index = node.move_index_to_array_index[moves_played[i]]
-                node.children_value_sums[:,node_array_index] += value 
+                node.children_value_sums[:,node_array_index] += value
                 node.children_visit_counts[node_array_index] += 1
 
         # Record the search tree result for full moves.
         if is_full_move:
-            # If we need to save memory, we can just save the `search_root.array_index_to_move_index` and 
+            # If we need to save memory, we can just save the `search_root.array_index_to_move_index` and
             # `search_root.children_visit_counts` arrays, and compute the full policy (of length NUM_MOVES)
             # when writing to disk.
             policy = np.zeros((NUM_MOVES,))
@@ -103,7 +104,7 @@ class MCTSAgent:
 
         # Select the move to play now.
         return search_root.get_move_index_to_play(state)
-    
+
 
 class MCTSValuesNode:
     def __init__(self, mcts_config):
@@ -126,7 +127,7 @@ class MCTSValuesNode:
         #   array_index = np.argmax(self.children_value_sums)
         #   self.array_index_to_move_index[array_index] -> move_index associated with the array index
         self.array_index_to_move_index = None
-    
+
         self.children_value_sums = None         # Shape (4, NUM_VALID_MOVES)
         self.children_visit_counts = None       # Shape (NUM_VALID_MOVES,)
         self.children_priors = None            # Shape (NUM_VALID_MOVES,)
@@ -136,14 +137,14 @@ class MCTSValuesNode:
 
     def _exploitation_scores(self, player):
         # Exploitation scores are between 0 and 1. 0 means the player has lost every game from this move,
-        # 1 means the player has won every game from this move.        
+        # 1 means the player has won every game from this move.
         exploitation_scores = np.divide(
             self.children_value_sums[player],
             self.children_visit_counts,
             where=(self.children_visit_counts != 0)
         )
 
-        # For children that have no visits, we just use the value of this node itself based on what the 
+        # For children that have no visits, we just use the value of this node itself based on what the
         # NN has reported.
         #
         # For example, if this node nearly always loses for player 1, and we're doing rollouts for player 1,
@@ -168,10 +169,31 @@ class MCTSValuesNode:
     def select_child_by_ucb(self, state: State):
         exploitation_scores = self._exploitation_scores(state.player)
         exploration_scores = self._exploration_scores()
-        
+
         ucb_scores = exploitation_scores + exploration_scores
 
-        move_index_selected = self.array_index_to_move_index[np.argmax(ucb_scores)]
+        array_index_selected = np.argmax(ucb_scores)
+        move_index_selected = self.array_index_to_move_index[array_index_selected]
+
+        if LOG_UCB_REPORT:
+            log_event(
+                "ucb_report",
+                {
+                    "player": state.player,
+                    "board": state.occupancies.tolist(),
+                    "children_visit_counts": self.children_visit_counts.tolist(),
+                    "children_value_sums": self.children_value_sums.tolist(),
+                    "children_priors": self.children_priors.tolist(),
+                    "array_index_to_move_index": self.array_index_to_move_index.tolist(),
+                    "values": self.values.tolist(),
+                    "exploitation_scores": exploitation_scores.tolist(),
+                    "exploration_scores": exploration_scores.tolist(),
+                    "ucb_scores": ucb_scores.tolist(),
+                    "array_index_selected": int(array_index_selected),
+                    "move_index_selected": int(move_index_selected),
+                }
+            )
+
         return move_index_selected
 
     async def get_value_and_expand_children(self, state: State, inference_client: InferenceClient):
@@ -195,10 +217,10 @@ class MCTSValuesNode:
         # Next, we need an array of the valid moves in the rotated POV. Importantly, our array will be in
         # the same order as self.array_index_to_move_index. This means the result of the `evaluate` call
         # will already be in the universal POV, without needing any additional rotation.
-        # 
+        #
         # I'm a bit worried this reduces the efficacy of caching calls, and instead we must be passing in a
         # sorted array of valid modes to ensure that each time the same board appears we're returning the same
-        # result. However, I _think_ that for a given board array one can almost always deduce which player's turn it is, 
+        # result. However, I _think_ that for a given board array one can almost always deduce which player's turn it is,
         # and therefore there's exactly one possibility for the valid moves array we pass in. (An exception might be near
         # the end of a game where some players don't have valid moves? I'm not sure.)
         player_pov_valid_move_indices = player_pov_helpers.moves_indices_to_player_pov(self.array_index_to_move_index, state.player)
@@ -235,11 +257,10 @@ class MCTSValuesNode:
                 }
             )
 
-        probabilities = softmax(self.children_visit_counts)
-        probabilities /= np.sum(probabilities)
+        probabilities = self.children_visit_counts / np.sum(self.children_visit_counts)
+        array_index = np.random.choice(len(probabilities), p=probabilities)
+        return self.array_index_to_move_index[array_index]
 
-        return self.array_index_to_move_index[np.random.choice(len(probabilities), p=probabilities)]
-    
     def add_noise(self):
         total_dirichlet_alpha = self.mcts_config["total_dirichlet_alpha"]
         noise = np.random.dirichlet([total_dirichlet_alpha / self.num_valid_moves] * self.num_valid_moves)

@@ -2,12 +2,13 @@ development:
   debug_mode: true
   profile: false
   runtime: 36000
-  display_logs_in_console: true
-  output_directory: "data/2024-11-20_17-29-54-solitude"
+  display_logs_in_console: false
+  output_directory: "data/2024-11-21_17-17-40-remicate"
 
 logging:
-  save_interval: 3600
+  save_interval: 60
   mcts_report_fraction: 1.0
+  ucb_report: true
   gpu_evaluation: true
   made_move: true
 
@@ -19,8 +20,6 @@ game:
 architecture:
   gameplay_processes: 1
   coroutines_per_process: 1
-
-  # Number of games to accumulate before they're flushed to disk.
   game_flush_threshold: 1
 
 networks:
@@ -31,13 +30,11 @@ networks:
     policy_head_channels: 64
     residual_blocks: 8
 
-    # One of model_path or model_directory should be specified.
-    model_path: ""
-    model_directory: "data/2024-11-20_17-29-54-solitude/models/"
-
-    # Frequency to check if there's a new model to load from disk.
-    new_model_check_interval: 120
     batch_size: 1
+
+    model_path: "data/2024-11-20_23-29-01-chickpea/models/2024-11-21_09-30-12_240898.pt"
+    model_directory: ""
+    new_model_check_interval: 1.0e+6
 
 training:
   run: false

@@ -3,11 +3,12 @@ development:
   profile: false
   runtime: 3600
   display_logs_in_console: false
-  output_directory: "data/2024-11-20_14-10-24-survival"
+  output_directory: "data/2024-11-21_16-37-53-medicinal"
 
 logging:
   save_interval: 120
   mcts_report_fraction: 0
+  ucb_report: false
   gpu_evaluation: true
   made_move: true
 
@@ -25,14 +26,14 @@ architecture:
   game_flush_threshold: 1.0e+9
 
 networks:
-  s0:
+  s127919:
     main_body_channels: 64
     value_head_channels: 16
     value_head_flat_layer_width: 64
     policy_head_channels: 64
     residual_blocks: 8
 
-    model_path: "data/2024-11-20_14-10-24-survival/models/0_s0.pt"
+    model_path: "data/2024-11-20_23-29-01-chickpea/models/2024-11-21_02-02-07_101650.pt"
 
     batch_size: 16
 
@@ -40,14 +41,14 @@ networks:
     # Very large value here so we don't worry about loading new models.
     new_model_check_interval: 1.0e+9
 
-  s105769:
+  s253555:
     main_body_channels: 64
     value_head_channels: 16
     value_head_flat_layer_width: 64
     policy_head_channels: 64
     residual_blocks: 8
 
-    model_path: "data/2024-11-20_14-10-24-survival/models/2024-11-20_02-24-48_055438_s105769.pt"
+    model_path: "data/2024-11-20_23-29-01-chickpea/models/2024-11-21_04-31-02_093684.pt"
 
     batch_size: 16
 
@@ -55,14 +56,14 @@ networks:
     # Very large value here so we don't worry about loading new models.
     new_model_check_interval: 1.0e+9
 
-  s208119:
+  s379394:
     main_body_channels: 64
     value_head_channels: 16
     value_head_flat_layer_width: 64
     policy_head_channels: 64
     residual_blocks: 8
 
-    model_path: "data/2024-11-20_14-10-24-survival/models/2024-11-20_05-55-34_563027_s208119.pt"
+    model_path: "data/2024-11-20_23-29-01-chickpea/models/2024-11-21_06-58-13_953337.pt"
 
     batch_size: 16
 
@@ -70,14 +71,14 @@ networks:
     # Very large value here so we don't worry about loading new models.
     new_model_check_interval: 1.0e+9
 
-  s313486:
+  s510189:
     main_body_channels: 64
     value_head_channels: 16
     value_head_flat_layer_width: 64
     policy_head_channels: 64
     residual_blocks: 8
 
-    model_path: "data/2024-11-20_14-10-24-survival/models/2024-11-20_09-34-23_478500_s313486.pt"
+    model_path: "data/2024-11-20_23-29-01-chickpea/models/2024-11-21_09-30-12_240898.pt"
 
     batch_size: 16
 
@@ -99,15 +100,15 @@ default_agent:
     root_exploration_fraction: 0.08
 
 individual_agents:
-  - name: "s0"
+  - name: "s127919"
     mcts:
-      network: "s0"
-  - name: "s105769"
+      network: "s127919"
+  - name: "s253555"
     mcts:
-      network: "s105769"
-  - name: "s208119"
+      network: "s253555"
+  - name: "s379394"
     mcts:
-      network: "s208119"
-  - name: "s313486"
+      network: "s379394"
+  - name: "s510189"
     mcts:
-      network: "s313486"
+      network: "s510189"

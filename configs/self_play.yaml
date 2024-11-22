@@ -3,11 +3,12 @@ development:
   profile: false
   runtime: 36000
   display_logs_in_console: false
-  output_directory: "data/2024-11-19_08-38-28-extracted"
+  output_directory: "data/2024-11-20_23-29-01-chickpea"
 
 logging:
   save_interval: 3600
-  mcts_report_fraction: 0.001
+  mcts_report_fraction: 0
+  ucb_report: false
   gpu_evaluation: true
   made_move: true
 
@@ -33,7 +34,7 @@ networks:
 
     # One of model_path or model_directory should be specified.
     model_path: ""
-    model_directory: "data/2024-11-19_08-38-28-extracted/models/"
+    model_directory: "data/2024-11-20_23-29-01-chickpea/models/"
 
     # Frequency to check if there's a new model to load from disk.
     new_model_check_interval: 120
@@ -42,12 +43,12 @@ networks:
 training:
   run: true
   network_name: "default"
+
   batch_size: 64
 
   policy_loss_weight: 0.158
   learning_rate: 1.0e-3
-
-  # Frequency to check if there's new data to train on.
+  
   new_data_check_interval: 120
 
 default_agent:
