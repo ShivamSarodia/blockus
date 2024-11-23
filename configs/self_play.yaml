@@ -3,7 +3,7 @@ development:
   profile: false
   runtime: 36000
   display_logs_in_console: false
-  output_directory: "data/2024-11-22_00-28-28-overbragging"
+  output_directory: "data/2024-11-22_00-28-28-"
 
 logging:
   save_interval: 3600
@@ -49,7 +49,24 @@ training:
   policy_loss_weight: 0.158
   learning_rate: 1.0e-3
   
-  new_data_check_interval: 120
+  # Maximum number of samples into the past to consider for training.
+  sample_window: 50000
+  # Number of samples that each generation will be trained on.
+  samples_per_generation: 10000
+  # Approximately how often each sample will be used for training. 
+  # (This controls how much data must be available before a new generation is trained.)
+  sampling_ratio: 1.0
+  # If we started training as soon as we had samples_per_generation samples available, 
+  # we would overfit to the first samples because we'd train on that set many times 
+  # because early on the number of samples available in the window is smaller than in 
+  # steady state. To reduce the impact of this, we introduce a sampling delay. This 
+  # parameter controls how many samples we wait before starting to train. For example,
+  # with a sampling_delay of 20000 and a samples_per_gen of 10000 (and ratio = 1), we
+  # would wait until 30000 samples are available before training for the first time.
+  sampling_delay: 10000
+  # How often to wait before checking for new data. We don't want this to get too big
+  # because then we may undersample if a lot of new samples appear in one iteration.
+  new_data_check_interval: 30
 
 default_agent:
   mcts:

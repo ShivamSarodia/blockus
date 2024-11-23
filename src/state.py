@@ -97,13 +97,6 @@ class State:
 
     def valid_moves_array(self):
         return ~self.moves_ruled_out[self.player] & self.moves_enabled[self.player]
-
-    def select_random_valid_move_index(self):
-        valid_move_indices = np.flatnonzero(self.valid_moves_array())
-        if len(valid_move_indices) == 0:
-            return None
-        else:
-            return np.random.choice(valid_move_indices)
     
     def result(self):
         r = np.where(self.accumulated_scores == np.max(self.accumulated_scores), 1, 0)

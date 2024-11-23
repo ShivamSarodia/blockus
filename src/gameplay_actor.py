@@ -11,6 +11,7 @@ from typing import Dict
 from configuration import config, merge_into_dict
 from data_recorder import DataRecorder
 from inference.client import InferenceClient
+from agents import CustomAgent
 from mcts import MCTSAgent
 from state import State
 from event_logger import log_event
@@ -69,6 +70,8 @@ class GameplayActor:
                     recorder_game_id,
                 )
                 agents.append(agent)
+            elif "custom" in agent_config:
+                agents.append(CustomAgent())
             else:
                 raise "Unknown agent type."
 
