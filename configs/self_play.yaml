@@ -3,7 +3,7 @@ development:
   profile: false
   runtime: 36000
   display_logs_in_console: false
-  output_directory: "data/2024-11-20_23-29-01-chickpea"
+  output_directory: "data/2024-11-22_00-28-28-overbragging"
 
 logging:
   save_interval: 3600
@@ -34,7 +34,7 @@ networks:
 
     # One of model_path or model_directory should be specified.
     model_path: ""
-    model_directory: "data/2024-11-20_23-29-01-chickpea/models/"
+    model_directory: "data/2024-11-22_00-28-28-overbragging/models/"
 
     # Frequency to check if there's a new model to load from disk.
     new_model_check_interval: 120

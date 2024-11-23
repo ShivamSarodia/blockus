@@ -3,7 +3,7 @@ development:
   profile: false
   runtime: 36000
   display_logs_in_console: false
-  output_directory: "data/2024-11-21_17-17-40-remicate"
+  output_directory: "data/2024-11-22_16-23-57-pact"
 
 logging:
   save_interval: 60
@@ -32,8 +32,8 @@ networks:
 
     batch_size: 1
 
-    model_path: "data/2024-11-20_23-29-01-chickpea/models/2024-11-21_09-30-12_240898.pt"
-    model_directory: ""
+    model_path: ""
+    model_directory: "data/2024-11-22_00-28-28-overbragging/models/"
     new_model_check_interval: 1.0e+6
 
 training:

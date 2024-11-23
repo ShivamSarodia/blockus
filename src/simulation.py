@@ -30,7 +30,7 @@ def run():
     output_data_dir = generate_output_data_dir()
 
     # To start, save the config to the output data directory.
-    with open(output_data_dir + "/config.json", "w") as config_file:
+    with open(output_data_dir + f"/config_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')}.json", "w") as config_file:
         json.dump(
             config(),
             config_file,
