@@ -3,7 +3,7 @@ development:
   profile: false
   runtime: 3600
   display_logs_in_console: false
-  output_directory: "data/2024-11-22_15-57-34-merited"
+  output_directory: "data/2024-11-23_22-31-06-arena-for-doublehandedness-vs-overbragging"
 
 logging:
   save_interval: 120
@@ -26,52 +26,7 @@ architecture:
   game_flush_threshold: 1.0e+9
 
 networks:
-  chickpea_final:
-    main_body_channels: 64
-    value_head_channels: 16
-    value_head_flat_layer_width: 64
-    policy_head_channels: 64
-    residual_blocks: 8
-
-    model_path: "data/2024-11-20_23-29-01-chickpea/models/2024-11-21_09-30-12_240898.pt"
-
-    batch_size: 16
-
-    # Frequency to check if there's a new model to load from disk.
-    # Very large value here so we don't worry about loading new models.
-    new_model_check_interval: 1.0e+9
-
-  extracted_final:
-    main_body_channels: 64
-    value_head_channels: 16
-    value_head_flat_layer_width: 64
-    policy_head_channels: 64
-    residual_blocks: 8
-
-    model_path: "data/2024-11-19_08-38-28-extracted/models/2024-11-20_09-34-23_478500.pt"
-
-    batch_size: 16
-
-    # Frequency to check if there's a new model to load from disk.
-    # Very large value here so we don't worry about loading new models.
-    new_model_check_interval: 1.0e+9
-
-  extracted_best:
-    main_body_channels: 64
-    value_head_channels: 16
-    value_head_flat_layer_width: 64
-    policy_head_channels: 64
-    residual_blocks: 8
-
-    model_path: "data/2024-11-20_14-10-24-survival/models/2024-11-20_02-24-48_055438_s105769.pt"
-
-    batch_size: 16
-
-    # Frequency to check if there's a new model to load from disk.
-    # Very large value here so we don't worry about loading new models.
-    new_model_check_interval: 1.0e+9
-
-  overbragging_best:
+  overbragging_472238:
     main_body_channels: 64
     value_head_channels: 16
     value_head_flat_layer_width: 64
@@ -84,31 +39,72 @@ networks:
 
     # Frequency to check if there's a new model to load from disk.
     # Very large value here so we don't worry about loading new models.
+    new_model_check_interval: 1.0e+9
+
+  overbragging_358297:
+    main_body_channels: 64
+    value_head_channels: 16
+    value_head_flat_layer_width: 64
+    policy_head_channels: 64
+    residual_blocks: 8
+
+    model_path: "data/2024-11-22_00-28-28-overbragging/models/2024-11-22_07-34-06_498653.pt"
+
+    batch_size: 16
+
+    # Frequency to check if there's a new model to load from disk.
+    # Very large value here so we don't worry about loading new models.
+    new_model_check_interval: 1.0e+9
+
+  doublehandedness_361028:
+    main_body_channels: 64
+    value_head_channels: 16
+    value_head_flat_layer_width: 64
+    policy_head_channels: 64
+    residual_blocks: 8
+
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000361028.pt"
+
+    batch_size: 16
+
+    # Frequency to check if there's a new model to load from disk.
+    # Very large value here so we don't worry about loading new models.
+    new_model_check_interval: 1.0e+9
+
+  doublehandedness_476496:
+    main_body_channels: 64
+    value_head_channels: 16
+    value_head_flat_layer_width: 64
+    policy_head_channels: 64
+    residual_blocks: 8
+
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000476496.pt"
+
+    batch_size: 16
+
+    # Frequency to check if there's a new model to load from disk.
+    # Very large value here so we don't worry about loading new models.
     new_model_check_interval: 1.0e+9        
 
 training:
   run: false
 
 default_agent:
-  mcts:
-    network: "placeholder to override"
-    full_move_probability: 1.0
-    full_move_rollouts: 500
-    fast_move_rollouts: "never used"
-    ucb_exploration: 1.4
-    total_dirichlet_alpha: 10.83
-    root_exploration_fraction: 0.08
+  type: "mcts"
+  network: "placeholder to override"
+  full_move_probability: 1.0
+  full_move_rollouts: 500
+  fast_move_rollouts: "never used"
+  ucb_exploration: 1.4
+  total_dirichlet_alpha: 10.83
+  root_exploration_fraction: 0.08
 
 individual_agents:
-  - name: "chickpea_final"
-    mcts:
-      network: "chickpea_final"
-  - name: "extracted_final"
-    mcts:
-      network: "extracted_final"
-  - name: "extracted_best"
-    mcts:
-      network: "extracted_best"
-  - name: "overbragging_best"
-    mcts:
-      network: "overbragging_best"
+  - name: "overbragging_472238"
+    network: "overbragging_472238"
+  - name: "overbragging_358297"
+    network: "overbragging_358297"
+  - name: "doublehandedness_361028"
+    network: "doublehandedness_361028"
+  - name: "doublehandedness_476496"
+    network: "doublehandedness_476496"

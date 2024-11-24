@@ -19,7 +19,8 @@ class DataRecorder:
         #     "occupancies": [],
         #     "policies": [],
         #     "players": [],
-        #     "values": [],
+        #     "average_rollout_values": [],
+        #     "final_game_values": [],
         #     "game_ids": [],
         # }
         self.games = {}
@@ -31,12 +32,13 @@ class DataRecorder:
             "occupancies": [],
             "policies": [],
             "players": [],
-            "values": [],
+            "average_rollout_values": [],
+            "final_game_values": [],
             "game_ids": [],
         }
         return game_id
 
-    def record_rollout_result(self, game_id: int, state: State, policy: np.ndarray):
+    def record_rollout_result(self, game_id: int, state: State, policy: np.ndarray, average_rollout_value: np.ndarray):
         """
         After each MCTS rollout completes, record the occupancy state did the rollout on and the final
         visit distribution of the children of that node.
@@ -48,13 +50,17 @@ class DataRecorder:
         game["policies"].append(
             player_pov_helpers.moves_array_to_player_pov(policy, state.player)
         )
+        game["average_rollout_values"].append(
+            player_pov_helpers.values_to_player_pov(average_rollout_value, state.player)
+        )
         game["players"].append(state.player)
         game["game_ids"].append(game_id)
     
     def record_game_end(self, game_id: int, values: np.ndarray):
         game = self.games[game_id]
         for player in game["players"]:
-            game["values"].append(player_pov_helpers.values_to_player_pov(values, player))
+            game["final_game_values"].append(player_pov_helpers.values_to_player_pov(values, player))
+
         self.finished_games.add(game_id)
         if len(self.finished_games) >= GAME_FLUSH_THRESHOLD:
             self.flush()
@@ -63,7 +69,8 @@ class DataRecorder:
         game_ids = []
         occupancies = []
         policies = []
-        values = []
+        average_rollout_values = []
+        final_game_values = []
 
         for game_id in self.finished_games:
             game = self.games[game_id]
@@ -73,7 +80,8 @@ class DataRecorder:
             if len(game["occupancies"]) > 0:
                 occupancies.append(np.array(game["occupancies"]))
                 policies.append(np.array(game["policies"]))
-                values.append(np.array(game["values"]))
+                final_game_values.append(np.array(game["final_game_values"]))
+                average_rollout_values.append(np.array(game["average_rollout_values"]))
                 game_ids.append(np.array(game["game_ids"]))
 
             del self.games[game_id]
@@ -86,7 +94,8 @@ class DataRecorder:
         game_ids = np.concatenate(game_ids)
         occupancies = np.concatenate(occupancies)
         policies = np.concatenate(policies)
-        values = np.concatenate(values)
+        final_game_values = np.concatenate(final_game_values)
+        average_rollout_values = np.concatenate(average_rollout_values)
 
         # Save the files to disk with the number of samples included, so that the
         # training script can tell from just the filename how many samples are in
@@ -96,5 +105,6 @@ class DataRecorder:
             game_ids=game_ids,
             occupancies=occupancies,
             policies=policies,
-            values=values,
+            final_game_values=final_game_values,
+            average_rollout_values=average_rollout_values,
         )

@@ -96,10 +96,12 @@ class MCTSAgent:
             policy[search_root.array_index_to_move_index] = (
                 search_root.children_visit_counts / np.sum(search_root.children_visit_counts)
             )
+            average_rollout_value = np.sum(search_root.children_value_sums, axis=1) / np.sum(search_root.children_visit_counts)
             self.data_recorder.record_rollout_result(
                 self.recorder_game_id,
                 state,
                 policy,
+                average_rollout_value,
             )
 
         # Select the move to play now.

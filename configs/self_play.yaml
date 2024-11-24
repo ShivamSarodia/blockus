@@ -1,9 +1,9 @@
 development:
   debug_mode: true
   profile: false
-  runtime: 36000
+  runtime: 72000
   display_logs_in_console: false
-  output_directory: "data/2024-11-22_00-28-28-"
+  output_directory: "data/2024-11-23_00-37-50-doublehandedness"
 
 logging:
   save_interval: 3600
@@ -34,7 +34,7 @@ networks:
 
     # One of model_path or model_directory should be specified.
     model_path: ""
-    model_directory: "data/2024-11-22_00-28-28-overbragging/models/"
+    model_directory: "data/2024-11-23_00-37-50-doublehandedness/models/"
 
     # Frequency to check if there's a new model to load from disk.
     new_model_check_interval: 120
@@ -69,16 +69,16 @@ training:
   new_data_check_interval: 30
 
 default_agent:
-  mcts:
-    network: "default"
-    full_move_probability: 0.2
-    full_move_rollouts: 500
-    fast_move_rollouts: 100
-    # Very haphazard guess at an exploration parameter.
-    ucb_exploration: 1.4
-    # This mimics the value in AlphaZero using the logic from KataGo.
-    total_dirichlet_alpha: 10.83
-    root_exploration_fraction: 0.25
+  type: "mcts"
+  network: "default"
+  full_move_probability: 0.2
+  full_move_rollouts: 500
+  fast_move_rollouts: 100
+  # Very haphazard guess at an exploration parameter.
+  ucb_exploration: 1.4
+  # This mimics the value in AlphaZero using the logic from KataGo.
+  total_dirichlet_alpha: 10.83
+  root_exploration_fraction: 0.25
 
 individual_agents:
   - name: "default"

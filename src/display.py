@@ -15,16 +15,16 @@ class Display:
         for x in range(BOARD_SIZE):
             for y in range(BOARD_SIZE):
                 if self.occupancies[0, x, y]:
-                    color = [1, 0, 0]
+                    color = [0, 0, 1]
                 elif self.occupancies[1, x, y]:
-                    color = [0, 1, 0]
+                    color = [1, 1, 0]
                 elif self.occupancies[2, x, y]:
-                    color = [0.25, 0.25, 1]
+                    color = [1, 0, 0]
                 elif self.occupancies[3, x, y]:
-                    color = [0, 1, 1]
+                    color = [0, 1, 0]
                 else:
                     color = [1, 1, 1]
-                grid[y, x] = color
+                grid[x, y] = color
 
         # Plot the grid
         plt.imshow(grid, interpolation='nearest')

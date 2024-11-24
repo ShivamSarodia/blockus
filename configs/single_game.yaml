@@ -2,14 +2,14 @@ development:
   debug_mode: true
   profile: false
   runtime: 36000
-  display_logs_in_console: false
-  output_directory: "data/2024-11-22_16-23-57-pact"
+  display_logs_in_console: true
+  output_directory: "data/2024-11-23_23-09-56-matriculant"
 
 logging:
   save_interval: 60
-  mcts_report_fraction: 1.0
-  ucb_report: true
-  gpu_evaluation: true
+  mcts_report_fraction: 0.0
+  ucb_report: false
+  gpu_evaluation: false
   made_move: true
 
 game:
@@ -40,19 +40,20 @@ training:
   run: false
 
 default_agent:
-  mcts:
-    network: "default"
-    full_move_probability: 1.0
-    full_move_rollouts: 500
-    fast_move_rollouts: 100
-    # Very haphazard guess at an exploration parameter.
-    ucb_exploration: 1.4
-    # This mimics the value in AlphaZero using the logic from KataGo.
-    total_dirichlet_alpha: 10.83
-    root_exploration_fraction: 0.25
+  type: "mcts"
+  network: "default"
+  full_move_probability: 1.0
+  full_move_rollouts: 500
+  fast_move_rollouts: 100
+  # Very haphazard guess at an exploration parameter.
+  ucb_exploration: 1.4
+  # This mimics the value in AlphaZero using the logic from KataGo.
+  total_dirichlet_alpha: 10.83
+  root_exploration_fraction: 0.25
 
 individual_agents:
   - name: "default"
   - name: "default"
   - name: "default"
-  - name: "default"
+  - name: "human"
+    type: "human"

@@ -11,7 +11,7 @@ from typing import Dict
 from configuration import config, merge_into_dict
 from data_recorder import DataRecorder
 from inference.client import InferenceClient
-from agents import CustomAgent
+from agents import RandomAgent, HumanAgent
 from mcts import MCTSAgent
 from state import State
 from event_logger import log_event
@@ -60,18 +60,19 @@ class GameplayActor:
 
         agents = []
         for agent_config in agent_configs:
-            if "mcts" in agent_config:
-                mcts_config = agent_config["mcts"]
-                network_name = mcts_config["network"]
+            if agent_config["type"] == "mcts":
+                network_name = agent_config["network"]
                 agent = MCTSAgent(
-                    mcts_config,
+                    agent_config,
                     self.inference_clients[network_name],
                     self.data_recorder,
                     recorder_game_id,
                 )
                 agents.append(agent)
-            elif "custom" in agent_config:
-                agents.append(CustomAgent())
+            elif agent_config["type"] == "random":
+                agents.append(RandomAgent())
+            elif agent_config["type"] == "human":
+                agents.append(HumanAgent())
             else:
                 raise "Unknown agent type."
 

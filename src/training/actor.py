@@ -122,7 +122,10 @@ class TrainingActor:
             model_name = str(samples_read).zfill(9)
 
             # Load the new game data.
-            boards, policies, values = load_games(gamedata_paths_in_window)
+            boards, policies, final_game_values, average_rollout_values = load_games(gamedata_paths_in_window)
+
+            # TODO: Make this ratio a configuration.
+            values = (final_game_values + average_rollout_values) / 2
 
             log_event("training_window_loaded", {
                 "model_name": model_name,
