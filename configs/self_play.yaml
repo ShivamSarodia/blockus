@@ -3,7 +3,7 @@ development:
   profile: false
   runtime: 72000
   display_logs_in_console: false
-  output_directory: "data/2024-11-23_00-37-50-doublehandedness"
+  output_directory: "data/2024-11-24_00-18-45-literatist"
 
 logging:
   save_interval: 3600
@@ -24,21 +24,23 @@ architecture:
   # Number of games to accumulate before they're flushed to disk.
   game_flush_threshold: 200
 
-networks:
-  default:
-    main_body_channels: 64
-    value_head_channels: 16
-    value_head_flat_layer_width: 64
-    policy_head_channels: 64
-    residual_blocks: 8
+default_network:
+  main_body_channels: 64
+  value_head_channels: 16
+  value_head_flat_layer_width: 64
+  policy_head_channels: 64
+  residual_blocks: 8
 
-    # One of model_path or model_directory should be specified.
-    model_path: ""
-    model_directory: "data/2024-11-23_00-37-50-doublehandedness/models/"
+  # One of model_path or model_directory should be specified.
+  model_path: ""
+  model_directory: "data/2024-11-24_00-18-45-literatist/models/"
 
-    # Frequency to check if there's a new model to load from disk.
-    new_model_check_interval: 120
-    batch_size: 128
+  # Frequency to check if there's a new model to load from disk.
+  new_model_check_interval: 120
+  batch_size: 128
+
+individual_networks:
+  default: {}
 
 training:
   run: true

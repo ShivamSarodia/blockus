@@ -1,0 +1,101 @@
+development:
+  debug_mode: true
+  profile: false
+  runtime: 10800
+  display_logs_in_console: false
+  output_directory: "data/2024-11-24_23-27-22-giant-arena-for-doublehandedness-vs-literatist"
+
+logging:
+  save_interval: 3600
+  mcts_report_fraction: 0
+  ucb_report: false
+  gpu_evaluation: false
+  made_move: true
+
+game:
+  board_size: 10
+  num_moves: 6233
+  moves_directory: "data/moves_10/"
+
+architecture:
+  gameplay_processes: 6
+  coroutines_per_process: 64
+
+  # Number of games to accumulate before they're flushed to disk.
+  # Very large value here so we don't save the games.
+  game_flush_threshold: 1.0e+9
+
+default_network:
+  model_path: "override this"
+  main_body_channels: 64
+  value_head_channels: 16
+  value_head_flat_layer_width: 64
+  policy_head_channels: 64
+  residual_blocks: 8
+  batch_size: 1
+  new_model_check_interval: 1.0e+9
+
+individual_networks:
+  literatist_309082:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/000309082.pt"
+  literatist_402869:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/000402869.pt"
+  literatist_507203:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/000507203.pt"
+  literatist_600584:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/000600584.pt"
+  literatist_642275:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/000642275.pt"
+  doublehandedness_308783:
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000308783.pt"
+  doublehandedness_403006:
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000403006.pt"
+  doublehandedness_507557:
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000507557.pt"
+  doublehandedness_601211:
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000601211.pt"
+  doublehandedness_642415:
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000642415.pt"
+  doublehandedness_902125:
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000902125.pt"
+  doublehandedness_1204743:
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/001204743.pt"
+
+training:
+  run: false
+
+default_agent:
+  type: "mcts"
+  network: "placeholder to override"
+  full_move_probability: 1.0
+  full_move_rollouts: 500
+  fast_move_rollouts: "never used"
+  ucb_exploration: 1.4
+  total_dirichlet_alpha: 10.83
+  root_exploration_fraction: 0.08
+
+individual_agents:
+  - name: "literatist_309082"
+    network: "literatist_309082"
+  - name: "literatist_402869"
+    network: "literatist_402869"
+  - name: "literatist_507203"
+    network: "literatist_507203"
+  - name: "literatist_600584"
+    network: "literatist_600584"
+  - name: "literatist_642275"
+    network: "literatist_642275"
+  - name: "doublehandedness_308783"
+    network: "doublehandedness_308783"
+  - name: "doublehandedness_403006"
+    network: "doublehandedness_403006"
+  - name: "doublehandedness_507557"
+    network: "doublehandedness_507557"
+  - name: "doublehandedness_601211"
+    network: "doublehandedness_601211"
+  - name: "doublehandedness_642415"
+    network: "doublehandedness_642415"
+  - name: "doublehandedness_902125"
+    network: "doublehandedness_902125"
+  - name: "doublehandedness_1204743"
+    network: "doublehandedness_1204743"

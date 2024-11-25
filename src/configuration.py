@@ -8,8 +8,8 @@ _CONFIG = None
 _MOVES = None
 
 def merge_into_dict(original_dict, new_values):
-    assert isinstance(original_dict, dict)
-    assert isinstance(new_values, dict)
+    assert isinstance(original_dict, dict), f"{original_dict} must be a dict"
+    assert isinstance(new_values, dict), f"{new_values} must be a dict"
     for key in new_values:
         if key in original_dict:
             if isinstance(original_dict[key], dict):
@@ -41,6 +41,17 @@ def _load_config():
         
         assert keys[-1] in current, "Override key not found in config: " + override
         current[keys[-1]] = json.loads(value)
+
+    # Generate a completed list of network configurations from the original config.
+    default_network = config["default_network"]
+    config["networks"] = {}
+    for individual_network_name, individual_network in config["individual_networks"].items():
+        network_config = copy.deepcopy(default_network)
+        merge_into_dict(network_config, individual_network)
+        config["networks"][individual_network_name] = network_config
+
+    del config["default_network"]
+    del config["individual_networks"]
 
     # Finally, generate a completed list of agent configurations from the original config.
     default_agent = config["default_agent"]
