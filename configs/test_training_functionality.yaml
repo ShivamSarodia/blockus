@@ -1,6 +1,6 @@
 development: 
   display_logs_in_console: true
-  output_directory: "data/2024-11-22_18-45-57-jamie"
+  output_directory: "data/2024-11-26_22-50-22-halebi/"
 
 logging:
   save_interval: 1.0e+6
@@ -14,17 +14,16 @@ architecture:
   coroutines_per_process: 1
   game_flush_threshold: 1
 
-networks:
-  default:
-    new_model_check_interval: 10
-    model_path: ""
-    model_directory: "data/2024-11-22_18-45-57-jamie/models"
-    batch_size: 1
+default_network:
+  new_model_check_interval: 10
+  model_path: ""
+  model_directory: "data/2024-11-26_22-50-22-halebi/models/"
+  batch_size: 1
 
 training:
   sample_window: 20
   samples_per_generation: 1
   sampling_ratio: 1.0
-  sampling_delay: 0
+  minimum_window_size: 0
   new_data_check_interval: 5
-  batch_size: 1
+  batch_size: 2

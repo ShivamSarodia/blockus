@@ -19,6 +19,7 @@ class DataRecorder:
         #     "occupancies": [],
         #     "policies": [],
         #     "players": [],
+        #     "valid_moves_array": [],
         #     "average_rollout_values": [],
         #     "final_game_values": [],
         #     "game_ids": [],
@@ -32,6 +33,7 @@ class DataRecorder:
             "occupancies": [],
             "policies": [],
             "players": [],
+            "valid_moves_array": [],
             "average_rollout_values": [],
             "final_game_values": [],
             "game_ids": [],
@@ -49,6 +51,12 @@ class DataRecorder:
         )
         game["policies"].append(
             player_pov_helpers.moves_array_to_player_pov(policy, state.player)
+        )
+        game["valid_moves_array"].append(
+            player_pov_helpers.moves_array_to_player_pov(
+                state.valid_moves_array(),
+                state.player,
+            )
         )
         game["average_rollout_values"].append(
             player_pov_helpers.values_to_player_pov(average_rollout_value, state.player)
@@ -69,6 +77,7 @@ class DataRecorder:
         game_ids = []
         occupancies = []
         policies = []
+        valid_moves_array = []
         average_rollout_values = []
         final_game_values = []
 
@@ -80,6 +89,7 @@ class DataRecorder:
             if len(game["occupancies"]) > 0:
                 occupancies.append(np.array(game["occupancies"]))
                 policies.append(np.array(game["policies"]))
+                valid_moves_array.append(np.array(game["valid_moves_array"]))
                 final_game_values.append(np.array(game["final_game_values"]))
                 average_rollout_values.append(np.array(game["average_rollout_values"]))
                 game_ids.append(np.array(game["game_ids"]))
@@ -94,17 +104,19 @@ class DataRecorder:
         game_ids = np.concatenate(game_ids)
         occupancies = np.concatenate(occupancies)
         policies = np.concatenate(policies)
+        valid_moves_array = np.concatenate(valid_moves_array)
         final_game_values = np.concatenate(final_game_values)
         average_rollout_values = np.concatenate(average_rollout_values)
 
         # Save the files to disk with the number of samples included, so that the
         # training script can tell from just the filename how many samples are in
         # the file.
-        np.savez(
+        np.savez_compressed(
             os.path.join(self.directory, f"{int(time.time() * 1000)}_{len(game_ids)}.npz"),
             game_ids=game_ids,
             occupancies=occupancies,
             policies=policies,
             final_game_values=final_game_values,
             average_rollout_values=average_rollout_values,
+            valid_moves_array=valid_moves_array,
         )

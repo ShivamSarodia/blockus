@@ -21,6 +21,7 @@ def load_games(game_file_paths):
                 game_ids.append(npz["game_ids"])
             except BadZipFile:
                 log_event("bad_game_file", {"path": game_file})
+                return None
 
     return (
         np.concatenate(occupancies),

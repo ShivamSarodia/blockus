@@ -3,7 +3,7 @@ development:
   profile: false
   runtime: 3600
   display_logs_in_console: false
-  output_directory: "data/2024-11-24_22-29-42-arena-for-doublehandedness-vs-literatist"
+  output_directory: "data/2024-11-26_19-59-19-prodigal"
 
 logging:
   save_interval: 120
@@ -31,23 +31,17 @@ default_network:
   value_head_flat_layer_width: 64
   policy_head_channels: 64
   residual_blocks: 8
-  batch_size: 16
+  batch_size: 32
   # Frequency to check if there's a new model to load from disk.
   # Very large value here so we don't worry about loading new models.
   new_model_check_interval: 1.0e+9  
 
 individual_networks:
-  literatist_642275:
+  trained_in_notebook:
+    model_path: "data/2024-11-26_19-59-19-prodigal/models/trained_in_notebook.pt"
+
+  literatist_final:
     model_path: "data/2024-11-24_00-18-45-literatist/models/000642275.pt"
-
-  literatist_548823:
-    model_path: "data/2024-11-24_00-18-45-literatist/models/000548823.pt"
-
-  doublehandedness_642415:
-    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000642415.pt"
-
-  doublehandedness_548878:
-    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000548878.pt"
 
 training:
   run: false
@@ -63,11 +57,11 @@ default_agent:
   root_exploration_fraction: 0.08
 
 individual_agents:
-  - name: "literatist_642275"
-    network: "literatist_642275"
-  - name: "literatist_548823"
-    network: "literatist_548823"
-  - name: "doublehandedness_642415"
-    network: "doublehandedness_642415"
-  - name: "doublehandedness_548878"
-    network: "doublehandedness_548878"
+  - name: "trained_in_notebook"
+    network: "trained_in_notebook"
+  - name: "trained_in_notebook"
+    network: "trained_in_notebook"    
+  - name: "literatist_final"
+    network: "literatist_final"
+  - name: "literatist_final"
+    network: "literatist_final"    
