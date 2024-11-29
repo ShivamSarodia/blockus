@@ -22,19 +22,21 @@ architecture:
   coroutines_per_process: 1
   game_flush_threshold: 1
 
-networks:
-  default:
-    main_body_channels: 64
-    value_head_channels: 16
-    value_head_flat_layer_width: 64
-    policy_head_channels: 64
-    residual_blocks: 8
+default_network:
+  main_body_channels: 64
+  value_head_channels: 16
+  value_head_flat_layer_width: 64
+  policy_head_channels: 64
+  residual_blocks: 8
 
-    batch_size: 1
+  batch_size: 1
 
-    model_path: ""
-    model_directory: "data/2024-11-22_00-28-28-overbragging/models/"
-    new_model_check_interval: 1.0e+6
+  model_path: "data/2024-11-23_00-37-50-doublehandedness/models/001204743.pt"
+  model_directory: ""
+  new_model_check_interval: 1.0e+6
+
+individual_networks:
+  default: {}
 
 training:
   run: false
@@ -49,7 +51,7 @@ default_agent:
   ucb_exploration: 1.4
   # This mimics the value in AlphaZero using the logic from KataGo.
   total_dirichlet_alpha: 10.83
-  root_exploration_fraction: 0.25
+  root_exploration_fraction: 0.0
 
 individual_agents:
   - name: "default"
