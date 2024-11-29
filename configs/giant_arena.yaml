@@ -3,13 +3,13 @@ development:
   profile: false
   runtime: 10800
   display_logs_in_console: false
-  output_directory: "data/2024-11-24_23-27-22-giant-arena-for-doublehandedness-vs-literatist"
+  output_directory: "data/2024-11-27_19-07-37-meated"
 
 logging:
-  save_interval: 3600
+  save_interval: 120
   mcts_report_fraction: 0
   ucb_report: false
-  gpu_evaluation: false
+  gpu_evaluation: true
   made_move: true
 
 game:
@@ -19,11 +19,10 @@ game:
 
 architecture:
   gameplay_processes: 6
-  coroutines_per_process: 64
+  coroutines_per_process: 256
 
-  # Number of games to accumulate before they're flushed to disk.
   # Very large value here so we don't save the games.
-  game_flush_threshold: 1.0e+9
+  game_flush_threshold: 1.0e+6
 
 default_network:
   model_path: "override this"
@@ -32,34 +31,44 @@ default_network:
   value_head_flat_layer_width: 64
   policy_head_channels: 64
   residual_blocks: 8
-  batch_size: 1
-  new_model_check_interval: 1.0e+9
+  batch_size: 12
+
+  # Very large value so we don't check for new models.
+  new_model_check_interval: 1.0e+6
 
 individual_networks:
-  literatist_309082:
-    model_path: "data/2024-11-24_00-18-45-literatist/models/000309082.pt"
-  literatist_402869:
-    model_path: "data/2024-11-24_00-18-45-literatist/models/000402869.pt"
-  literatist_507203:
-    model_path: "data/2024-11-24_00-18-45-literatist/models/000507203.pt"
-  literatist_600584:
-    model_path: "data/2024-11-24_00-18-45-literatist/models/000600584.pt"
-  literatist_642275:
-    model_path: "data/2024-11-24_00-18-45-literatist/models/000642275.pt"
-  doublehandedness_308783:
-    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000308783.pt"
-  doublehandedness_403006:
-    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000403006.pt"
-  doublehandedness_507557:
-    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000507557.pt"
-  doublehandedness_601211:
-    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000601211.pt"
-  doublehandedness_642415:
-    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000642415.pt"
-  doublehandedness_902125:
+  literatist_0900k:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/000900003.pt"
+  literatist_1000k:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/001000035.pt"
+  literatist_1100k:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/001100003.pt"
+  literatist_1150k:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/001150051.pt"
+  literatist_1200k:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/001200035.pt"
+  literatist_1250k:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/001250019.pt"
+  literatist_1300k:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/001300003.pt"
+  literatist_1350k:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/001350051.pt"
+  doublehandedness_0900k:
     model_path: "data/2024-11-23_00-37-50-doublehandedness/models/000902125.pt"
-  doublehandedness_1204743:
+  doublehandedness_1000k:
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/001005949.pt"
+  doublehandedness_1100k:
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/001099850.pt"
+  doublehandedness_1150k:
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/001152252.pt"
+  doublehandedness_1200k:
     model_path: "data/2024-11-23_00-37-50-doublehandedness/models/001204743.pt"
+  doublehandedness_1250k:
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/001246401.pt"
+  doublehandedness_1300k:
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/001298961.pt"
+  doublehandedness_1350k:
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/001350898.pt"
 
 training:
   run: false
@@ -75,27 +84,36 @@ default_agent:
   root_exploration_fraction: 0.08
 
 individual_agents:
-  - name: "literatist_309082"
-    network: "literatist_309082"
-  - name: "literatist_402869"
-    network: "literatist_402869"
-  - name: "literatist_507203"
-    network: "literatist_507203"
-  - name: "literatist_600584"
-    network: "literatist_600584"
-  - name: "literatist_642275"
-    network: "literatist_642275"
-  - name: "doublehandedness_308783"
-    network: "doublehandedness_308783"
-  - name: "doublehandedness_403006"
-    network: "doublehandedness_403006"
-  - name: "doublehandedness_507557"
-    network: "doublehandedness_507557"
-  - name: "doublehandedness_601211"
-    network: "doublehandedness_601211"
-  - name: "doublehandedness_642415"
-    network: "doublehandedness_642415"
-  - name: "doublehandedness_902125"
-    network: "doublehandedness_902125"
-  - name: "doublehandedness_1204743"
-    network: "doublehandedness_1204743"
+  - name: "literatist_0900k"
+    network: "literatist_0900k"
+  - name: "literatist_1000k"
+    network: "literatist_1000k"
+  - name: "literatist_1100k"
+    network: "literatist_1100k"
+  - name: "literatist_1150k"
+    network: "literatist_1150k"
+  - name: "literatist_1200k"
+    network: "literatist_1200k"
+  - name: "literatist_1250k"
+    network: "literatist_1250k"
+  - name: "literatist_1300k"
+    network: "literatist_1300k"
+  - name: "literatist_1350k"
+    network: "literatist_1350k"
+  - name: "doublehandedness_0900k"
+    network: "doublehandedness_0900k"
+  - name: "doublehandedness_1000k"
+    network: "doublehandedness_1000k"
+  - name: "doublehandedness_1100k"
+    network: "doublehandedness_1100k"
+  - name: "doublehandedness_1150k"
+    network: "doublehandedness_1150k"
+  - name: "doublehandedness_1200k"
+    network: "doublehandedness_1200k"
+  - name: "doublehandedness_1250k"
+    network: "doublehandedness_1250k"
+  - name: "doublehandedness_1300k"
+    network: "doublehandedness_1300k"
+  - name: "doublehandedness_1350k"
+    network: "doublehandedness_1350k"
+

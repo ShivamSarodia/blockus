@@ -3,7 +3,7 @@ development:
   profile: false
   runtime: 3600
   display_logs_in_console: false
-  output_directory: "data/2024-11-26_19-59-19-prodigal"
+  output_directory: "data/2024-11-27_10-56-12-elusory"
 
 logging:
   save_interval: 120
@@ -23,7 +23,7 @@ architecture:
 
   # Number of games to accumulate before they're flushed to disk.
   # Very large value here so we don't save the games.
-  game_flush_threshold: 1.0e+9
+  game_flush_threshold: 1.0e+6
 
 default_network:
   main_body_channels: 64
@@ -34,14 +34,20 @@ default_network:
   batch_size: 32
   # Frequency to check if there's a new model to load from disk.
   # Very large value here so we don't worry about loading new models.
-  new_model_check_interval: 1.0e+9  
+  new_model_check_interval: 1.0e+6
 
 individual_networks:
-  trained_in_notebook:
-    model_path: "data/2024-11-26_19-59-19-prodigal/models/trained_in_notebook.pt"
-
-  literatist_final:
+  literatist_0600k:
     model_path: "data/2024-11-24_00-18-45-literatist/models/000642275.pt"
+
+  literatist_0800k:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/000800035.pt"
+
+  literatist_0900k:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/000900003.pt"
+
+  literatist_1030k:
+    model_path: "data/2024-11-24_00-18-45-literatist/models/001030051.pt"
 
 training:
   run: false
@@ -57,11 +63,11 @@ default_agent:
   root_exploration_fraction: 0.08
 
 individual_agents:
-  - name: "trained_in_notebook"
-    network: "trained_in_notebook"
-  - name: "trained_in_notebook"
-    network: "trained_in_notebook"    
-  - name: "literatist_final"
-    network: "literatist_final"
-  - name: "literatist_final"
-    network: "literatist_final"    
+  - name: "literatist_0600k"
+    network: "literatist_0600k"
+  - name: "literatist_0800k"
+    network: "literatist_0800k"
+  - name: "literatist_0900k"
+    network: "literatist_0900k"
+  - name: "literatist_1030k"
+    network: "literatist_1030k"

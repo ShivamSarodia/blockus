@@ -63,8 +63,11 @@ def run():
     for gameplay_actor in gameplay_actors:
         gameplay_actor.run.remote()
 
-    finish_time = (datetime.now() + timedelta(seconds=RUNTIME)).strftime("%I:%M:%S %p")
-    print(f"Running for {RUNTIME} seconds, finishing at {finish_time}...")
+    if RUNTIME > 0:
+        finish_time = (datetime.now() + timedelta(seconds=RUNTIME)).strftime("%I:%M:%S %p")
+        print(f"Running for {RUNTIME} seconds, finishing at {finish_time}...")
+    else:
+        print("Running indefinitely...")
 
     # Finally, run the main loop.
     start_time = time.time()
@@ -75,7 +78,7 @@ def run():
             current_time = time.time()
 
             # If it's time to wrap up, break.
-            if current_time > start_time + RUNTIME:
+            if RUNTIME > 0 and current_time > start_time + RUNTIME:
                 break
 
             # If it's been a while since the logs were copied, copy them now.
