@@ -7,6 +7,7 @@ from display import Display
 
 MOVES = moves_data()
 NUM_MOVES = config()["game"]["num_moves"]
+NUM_PIECES = config()["game"]["num_pieces"]
 BOARD_SIZE = config()["game"]["board_size"]
 DEBUG_MODE = config()["development"]["debug_mode"]
 
@@ -28,6 +29,9 @@ class State:
         # Track occupancies as the board state.
         self.occupancies = np.zeros((4, BOARD_SIZE, BOARD_SIZE), dtype=bool)
 
+        # Track unused pieces per player.
+        self.unused_pieces = np.ones((4, NUM_PIECES), dtype=bool)
+        
         # Player 0 starts.
         self.player = 0
 
@@ -54,6 +58,7 @@ class State:
         new_state.moves_ruled_out = self.moves_ruled_out.copy()
         new_state.accumulated_scores = self.accumulated_scores.copy()
         new_state.occupancies = self.occupancies.copy()
+        new_state.unused_pieces = self.unused_pieces.copy()
         new_state.player = self.player
 
         if DEBUG_MODE:
@@ -68,11 +73,17 @@ class State:
 
         This method assumes the provided move is valid.
         """
-        if DEBUG_MODE and not self.valid_moves_array()[move_index]:
-            raise "Playing an invalid move!"
+        if DEBUG_MODE:
+            if not self.valid_moves_array()[move_index]:
+                raise "Playing an invalid move!"
+            if not self.unused_pieces[self.player][MOVES["piece_indices"][move_index]]:
+                raise "Playing a piece that has already been used!"
 
         # Update occupancies.
-        self.occupancies[self.player] |= MOVES["new_occupieds"][move_index]            
+        self.occupancies[self.player] |= MOVES["new_occupieds"][move_index]  
+
+        # Update unused pieces.
+        self.unused_pieces[self.player][MOVES["piece_indices"][move_index]] = False
 
         # Rule out some moves.
         self.moves_ruled_out |= MOVES["moves_ruled_out_for_all"][move_index]

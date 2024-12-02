@@ -39,16 +39,13 @@ def loop_iteration(
         return
 
     # Great, we've loaded enough data to train a new batch. Now, train on it.
-    boards, policies, final_game_values, average_rollout_values = game_data_manager.sample(batch_size)
+    boards, policies, values = game_data_manager.sample(batch_size)
 
     boards = boards.to(dtype=torch.float32, device=device)
     policies = policies.to(dtype=torch.float32, device=device)
-    final_game_values = final_game_values.to(dtype=torch.float32, device=device)
-    average_rollout_values = average_rollout_values.to(dtype=torch.float32, device=device)
+    values = values.to(dtype=torch.float32, device=device)
 
     assert len(boards) == batch_size
-
-    values = (final_game_values + average_rollout_values) / 2
 
     pred_values, pred_policy = model(boards)
     value_loss = nn.CrossEntropyLoss()(

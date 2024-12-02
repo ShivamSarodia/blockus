@@ -16,13 +16,13 @@ class DataRecorder:
 
         # This object is a map from a randomly generated game ID to a dictionary of the form:
         # {
-        #     "occupancies": [],
+        #     "game_ids": [],
+        #     "boards": [],
         #     "policies": [],
         #     "players": [],
         #     "valid_moves_array": [],
-        #     "average_rollout_values": [],
-        #     "final_game_values": [],
-        #     "game_ids": [],
+        #     "values": [],
+        #     "unused_pieces": [],
         # }
         self.games = {}
         self.finished_games = set()
@@ -30,23 +30,24 @@ class DataRecorder:
     def start_game(self) -> int:
         game_id = random.randint(0, (1<<31) - 1)
         self.games[game_id] = {
-            "occupancies": [],
+            "game_ids": [],
+            "boards": [],
             "policies": [],
             "players": [],
             "valid_moves_array": [],
-            "average_rollout_values": [],
-            "final_game_values": [],
-            "game_ids": [],
+            "values": [],
+            "unused_pieces": [],
         }
         return game_id
 
-    def record_rollout_result(self, game_id: int, state: State, policy: np.ndarray, average_rollout_value: np.ndarray):
+    def record_rollout_result(self, game_id: int, state: State, policy: np.ndarray):
         """
         After each MCTS rollout completes, record the occupancy state did the rollout on and the final
         visit distribution of the children of that node.
         """
         game = self.games[game_id]
-        game["occupancies"].append(
+        game["game_ids"].append(game_id)
+        game["boards"].append(
             player_pov_helpers.occupancies_to_player_pov(state.occupancies, state.player)
         )
         game["policies"].append(
@@ -58,16 +59,18 @@ class DataRecorder:
                 state.player,
             )
         )
-        game["average_rollout_values"].append(
-            player_pov_helpers.values_to_player_pov(average_rollout_value, state.player)
+        game["unused_pieces"].append(
+            player_pov_helpers.unused_pieces_to_player_pov(
+                state.unused_pieces,
+                state.player
+            )
         )
         game["players"].append(state.player)
-        game["game_ids"].append(game_id)
     
     def record_game_end(self, game_id: int, values: np.ndarray):
         game = self.games[game_id]
         for player in game["players"]:
-            game["final_game_values"].append(player_pov_helpers.values_to_player_pov(values, player))
+            game["values"].append(player_pov_helpers.values_to_player_pov(values, player))
 
         self.finished_games.add(game_id)
         if len(self.finished_games) >= GAME_FLUSH_THRESHOLD:
@@ -75,48 +78,47 @@ class DataRecorder:
 
     def flush(self):
         game_ids = []
-        occupancies = []
+        boards = []
         policies = []
+        values = []
         valid_moves_array = []
-        average_rollout_values = []
-        final_game_values = []
+        unused_pieces = []
 
         for game_id in self.finished_games:
             game = self.games[game_id]
 
             # Some small number of games will have no data, because they were composed
             # only of fast rollouts that didn't report any states.
-            if len(game["occupancies"]) > 0:
-                occupancies.append(np.array(game["occupancies"]))
+            if len(game["boards"]) > 0:
+                game_ids.append(np.array(game["game_ids"]))
+                boards.append(np.array(game["boards"]))
                 policies.append(np.array(game["policies"]))
                 valid_moves_array.append(np.array(game["valid_moves_array"]))
-                final_game_values.append(np.array(game["final_game_values"]))
-                average_rollout_values.append(np.array(game["average_rollout_values"]))
-                game_ids.append(np.array(game["game_ids"]))
-
+                values.append(np.array(game["values"]))
+                unused_pieces.append(np.array(game["unused_pieces"]))
             del self.games[game_id]
         
         self.finished_games = set()
 
-        if not game_ids:
+        if not boards:
             return
         
         game_ids = np.concatenate(game_ids)
-        occupancies = np.concatenate(occupancies)
+        boards = np.concatenate(boards)
         policies = np.concatenate(policies)
         valid_moves_array = np.concatenate(valid_moves_array)
-        final_game_values = np.concatenate(final_game_values)
-        average_rollout_values = np.concatenate(average_rollout_values)
+        values = np.concatenate(values)
+        unused_pieces = np.concatenate(unused_pieces)
 
         # Save the files to disk with the number of samples included, so that the
         # training script can tell from just the filename how many samples are in
         # the file.
         np.savez_compressed(
-            os.path.join(self.directory, f"{int(time.time() * 1000)}_{len(game_ids)}.npz"),
+            os.path.join(self.directory, f"{int(time.time() * 1000)}_{len(boards)}.npz"),
             game_ids=game_ids,
-            occupancies=occupancies,
+            boards=boards,
             policies=policies,
-            final_game_values=final_game_values,
-            average_rollout_values=average_rollout_values,
+            values=values,
             valid_moves_array=valid_moves_array,
+            unused_pieces=unused_pieces,
         )

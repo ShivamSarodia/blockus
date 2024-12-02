@@ -1,6 +1,6 @@
 development: 
   display_logs_in_console: true
-  output_directory: "data/2024-11-26_22-50-22-halebi/"
+  output_directory: "data/2024-11-29_23-05-39-erpetologist/"
 
 logging:
   save_interval: 1.0e+6
@@ -17,7 +17,7 @@ architecture:
 default_network:
   new_model_check_interval: 10
   model_path: ""
-  model_directory: "data/2024-11-26_22-50-22-halebi/models/"
+  model_directory: "data/2024-11-29_23-05-39-erpetologist/models/"
   batch_size: 1
 
 training:

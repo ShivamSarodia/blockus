@@ -21,3 +21,7 @@ def moves_indices_to_player_pov(moves_indices, player):
 
 def values_to_player_pov(values, player):
     return np.roll(values, shift=-player, axis=-1)
+
+
+def unused_pieces_to_player_pov(unused_pieces, player):
+    return np.roll(unused_pieces, shift=-player, axis=0)

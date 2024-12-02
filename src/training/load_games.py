@@ -1,57 +1,74 @@
 from zipfile import BadZipFile
 import numpy as np
+from tqdm import tqdm
 from event_logger import log_event
 
-
 def load_games(game_file_paths):
-    occupancies = []
+    boards = []
     policies = []
-    final_game_values = []
-    average_rollout_values = []
-    game_ids = []
-
+    values = []
+    # valid_moves = []
+    # unused_pieces = []
+    
     for game_file in game_file_paths:
         with open(game_file, "rb") as f:
             try:
                 npz = np.load(f)
-                occupancies.append(npz["occupancies"])
+                boards.append(npz["boards"])
                 policies.append(npz["policies"])
-                final_game_values.append(npz["final_game_values"])
-                average_rollout_values.append(npz["average_rollout_values"])
-                game_ids.append(npz["game_ids"])
+                values.append(npz["values"])
+                # valid_moves.append(npz["valid_moves_array"])
+                # unused_pieces.append(npz["unused_pieces"])
             except BadZipFile:
                 log_event("bad_game_file", {"path": game_file})
 
-    if len(occupancies) == 0:
+    if len(boards) == 0:
         return None
 
     return (
-        np.concatenate(occupancies),
+        np.concatenate(boards),
         np.concatenate(policies),
-        np.concatenate(final_game_values),
-        np.concatenate(average_rollout_values),
+        np.concatenate(values),
+        # np.concatenate(valid_moves),
+        # np.concatenate(unused_pieces),
     )
 
-
-def load_old_format_games(game_file_paths):
-    occupancies = []
+def load_games_new(game_file_paths, with_tqdm=False):
+    game_ids = []
+    boards = []
     policies = []
     values = []
-    game_ids = []
+    valid_moves = []
+    unused_pieces = []
 
-    for game_file in game_file_paths:
+    iterator = tqdm(game_file_paths) if with_tqdm else game_file_paths
+    
+    for game_file in iterator:
         with open(game_file, "rb") as f:
             try:
                 npz = np.load(f)
-                occupancies.append(npz["occupancies"])
+                boards.append(npz["boards"])
                 policies.append(npz["policies"])
                 values.append(npz["values"])
-                game_ids.append(npz["game_ids"])
+                if "game_ids" in npz:
+                    game_ids.append(npz["game_ids"])
+                valid_moves.append(npz["valid_moves_array"])
+                unused_pieces.append(npz["unused_pieces"])
             except BadZipFile:
                 log_event("bad_game_file", {"path": game_file})
 
-    return (
-        np.concatenate(occupancies),
-        np.concatenate(policies),
-        np.concatenate(values),
-    )
+    if len(boards) == 0:
+        return None
+    
+    result = {
+        "boards": np.concatenate(boards),
+        "policies": np.concatenate(policies),
+        "values": np.concatenate(values),
+        "valid_moves": np.concatenate(valid_moves),
+        "unused_pieces": np.concatenate(unused_pieces),
+    }
+
+    if game_ids:
+        result["game_ids"] = np.concatenate(game_ids)
+
+    return result

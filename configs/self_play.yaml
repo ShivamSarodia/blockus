@@ -3,7 +3,7 @@ development:
   profile: false
   runtime: 0
   display_logs_in_console: false
-  output_directory: "data/2024-11-24_00-18-45-literatist"
+  output_directory: "data/2024-11-23_00-37-50-doublehandedness"
 
 logging:
   save_interval: 3600
@@ -15,6 +15,7 @@ logging:
 game:
   board_size: 10
   num_moves: 6233
+  num_pieces: 21
   moves_directory: "data/moves_10/"
 
 architecture:
@@ -33,7 +34,7 @@ default_network:
 
   # One of model_path or model_directory should be specified.
   model_path: ""
-  model_directory: "data/2024-11-24_00-18-45-literatist/models/"
+  model_directory: "data/2024-11-23_00-37-50-doublehandedness/models/"
 
   # Frequency to check if there's a new model to load from disk.
   new_model_check_interval: 120
