@@ -58,7 +58,7 @@ training:
   samples_per_generation: 10000
   # Approximately how often each sample will be used for training. 
   # (This controls how much data must be available before a new generation is trained.)
-  sampling_ratio: 1.0
+  sampling_ratio: 2.0
   # We feed the window until it reaches this size before starting any training.
   minimum_window_size: 10000
   new_data_check_interval: 60
@@ -74,6 +74,7 @@ default_agent:
   # This mimics the value in AlphaZero using the logic from KataGo.
   total_dirichlet_alpha: 10.83
   root_exploration_fraction: 0.25
+  move_selection_temperature: 1.0
 
 individual_agents:
   - name: "default"

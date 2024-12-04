@@ -3,27 +3,25 @@ development:
   profile: false
   runtime: 3600
   display_logs_in_console: false
-  output_directory: "data/2024-11-27_10-56-12-elusory"
+  output_directory: "data/2024-12-03_21-04-05-arena-for-multiple-rollout-counts"
 
 logging:
   save_interval: 120
   mcts_report_fraction: 0
   ucb_report: false
-  gpu_evaluation: true
+  gpu_evaluation: false
   made_move: true
 
 game:
   board_size: 10
   num_moves: 6233
+  num_pieces: 21
   moves_directory: "data/moves_10/"
 
 architecture:
   gameplay_processes: 6
   coroutines_per_process: 128
-
-  # Number of games to accumulate before they're flushed to disk.
-  # Very large value here so we don't save the games.
-  game_flush_threshold: 1.0e+6
+  game_flush_threshold: 600
 
 default_network:
   main_body_channels: 64
@@ -31,43 +29,37 @@ default_network:
   value_head_flat_layer_width: 64
   policy_head_channels: 64
   residual_blocks: 8
-  batch_size: 32
-  # Frequency to check if there's a new model to load from disk.
-  # Very large value here so we don't worry about loading new models.
-  new_model_check_interval: 1.0e+6
+  batch_size: 64
+  new_model_check_interval: -1
 
 individual_networks:
-  literatist_0600k:
-    model_path: "data/2024-11-24_00-18-45-literatist/models/000642275.pt"
-
-  literatist_0800k:
-    model_path: "data/2024-11-24_00-18-45-literatist/models/000800035.pt"
-
-  literatist_0900k:
-    model_path: "data/2024-11-24_00-18-45-literatist/models/000900003.pt"
-
-  literatist_1030k:
-    model_path: "data/2024-11-24_00-18-45-literatist/models/001030051.pt"
+  dh:
+    model_path: "data/2024-11-23_00-37-50-doublehandedness/models/002190002.pt"
 
 training:
   run: false
 
 default_agent:
   type: "mcts"
-  network: "placeholder to override"
+  network: "override"
   full_move_probability: 1.0
   full_move_rollouts: 500
   fast_move_rollouts: "never used"
   ucb_exploration: 1.4
   total_dirichlet_alpha: 10.83
-  root_exploration_fraction: 0.08
+  root_exploration_fraction: 0.0
+  move_selection_temperature: 1.0
 
 individual_agents:
-  - name: "literatist_0600k"
-    network: "literatist_0600k"
-  - name: "literatist_0800k"
-    network: "literatist_0800k"
-  - name: "literatist_0900k"
-    network: "literatist_0900k"
-  - name: "literatist_1030k"
-    network: "literatist_1030k"
+  - name: "rollouts_0100"
+    network: "dh"  
+    full_move_rollouts: 100
+  - name: "rollouts_0500"
+    network: "dh"
+    full_move_rollouts: 500
+  - name: "rollouts_1000"
+    network: "dh"
+    full_move_rollouts: 1000
+  - name: "rollouts_1500"
+    network: "dh"
+    full_move_rollouts: 1500

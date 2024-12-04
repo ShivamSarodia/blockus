@@ -257,8 +257,13 @@ class MCTSValuesNode:
                 }
             )
 
-        probabilities = self.children_visit_counts / np.sum(self.children_visit_counts)
-        array_index = np.random.choice(len(probabilities), p=probabilities)
+        temperature = self.mcts_config["move_selection_temperature"]
+        if temperature == 0:
+            array_index = np.argmax(self.children_visit_counts)
+        else:
+            weighted_visit_counts = np.power(self.children_visit_counts, 1 / temperature)
+            probabilities = weighted_visit_counts / np.sum(weighted_visit_counts)
+            array_index = np.random.choice(len(probabilities), p=probabilities)
         return self.array_index_to_move_index[array_index]
 
     def add_noise(self):

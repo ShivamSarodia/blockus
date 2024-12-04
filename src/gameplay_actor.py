@@ -11,7 +11,7 @@ from typing import Dict
 from configuration import config, merge_into_dict
 from data_recorder import DataRecorder
 from inference.client import InferenceClient
-from agents import RandomAgent, HumanAgent
+from agents import PolicySamplingAgent, RandomAgent, HumanAgent
 from mcts import MCTSAgent
 from state import State
 from event_logger import log_event
@@ -73,6 +73,13 @@ class GameplayActor:
                 agents.append(RandomAgent())
             elif agent_config["type"] == "human":
                 agents.append(HumanAgent())
+            elif agent_config["type"] == "policy_sampling":
+                network_name = agent_config["network"]
+                agent = PolicySamplingAgent(
+                    agent_config,
+                    self.inference_clients[network_name],
+                )
+                agents.append(agent)
             else:
                 raise "Unknown agent type."
 

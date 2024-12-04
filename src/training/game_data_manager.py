@@ -3,13 +3,45 @@ import random
 import torch
 import numpy as np
 from collections import deque
-
+from typing import List
 from training.load_games import load_games
 
 
-class GameDataManager:
-    def __init__(self, gamedata_dir, max_window_size):
+class GameDataPathFetcher:
+    def __init__(self):
+        pass 
+
+    def fetch_gamedata_paths(self):
+        raise NotImplementedError()
+    
+
+class DirectoryGameDataPathFetcher(GameDataPathFetcher):
+    def __init__(self, gamedata_dir):
         self.gamedata_dir = gamedata_dir
+
+    def fetch_gamedata_paths(self):
+        return sorted([
+            os.path.join(self.gamedata_dir, filename)
+            for filename in os.listdir(self.gamedata_dir)
+            if filename.endswith(".npz")
+        ])
+    
+
+class CustomGameDataPathFetcher(GameDataPathFetcher):
+    def __init__(self, gamedata_paths: List[str]):
+        self.gamedata_paths = gamedata_paths
+
+    def fetch_gamedata_paths(self):
+        return self.gamedata_paths
+
+
+class GameDataManager:
+    def __init__(
+            self,
+            gamedata_path_fetcher: GameDataPathFetcher,
+            max_window_size: int,
+        ):
+        self.gamedata_path_fetcher = gamedata_path_fetcher
         self.max_window_size = max_window_size
 
         self.loaded_gamedata_paths = set()
@@ -28,12 +60,7 @@ class GameDataManager:
             return
 
         # Get a list of all gamedata files on disk.
-        gamedata_paths = [
-            os.path.join(self.gamedata_dir, filename)
-            for filename in os.listdir(self.gamedata_dir)
-            if filename.endswith(".npz")
-        ]
-        gamedata_paths.sort()
+        gamedata_paths = self.gamedata_path_fetcher.fetch_gamedata_paths()
 
         # Load new files until we've reached the requested number of samples 
         # (or run out of files).

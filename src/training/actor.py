@@ -7,7 +7,7 @@ from typing import Dict
 from neural_net import NeuralNet
 from event_logger import log_event
 from configuration import config 
-from training.game_data_manager import GameDataManager
+from training.game_data_manager import DirectoryGameDataPathFetcher, GameDataManager
 import training.helpers
 
 TRAINING_RUN = config()["training"]["run"]
@@ -48,7 +48,8 @@ class TrainingActor:
 
         optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
-        game_data_manager = GameDataManager(self.gamedata_path, SAMPLE_WINDOW)
+        game_data_path_fetcher = DirectoryGameDataPathFetcher(self.gamedata_path)
+        game_data_manager = GameDataManager(game_data_path_fetcher, SAMPLE_WINDOW)
 
         # As this method is currently implemented, this doesn't work
         # well at all when the latest_model_sample_count is large because 

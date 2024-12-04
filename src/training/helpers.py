@@ -68,4 +68,5 @@ def loop_iteration(
         "loss": loss.item(),
         "batch_size": len(boards),
         "cumulative_window_fed": game_data_manager.cumulative_window_fed(),
+        "ingestion_count": ingestion_count,
     }

@@ -51,7 +51,12 @@ class InferenceActor:
         # don't check again.
         current_time = time.time()
         time_since_last_check = current_time - self.last_checked_for_new_model
-        if time_since_last_check < self.network_config["new_model_check_interval"]:
+        if (
+            # A negative check interval means we never check for new models, so if
+            # we see that then return immediately if a model is already loaded.
+            (self.network_config["new_model_check_interval"] <= 0 and self.model) or
+            time_since_last_check < self.network_config["new_model_check_interval"]
+        ):
             return
         
         # Ok, we're gonna actually check for a new model.

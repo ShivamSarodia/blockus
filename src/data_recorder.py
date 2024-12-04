@@ -73,7 +73,11 @@ class DataRecorder:
             game["values"].append(player_pov_helpers.values_to_player_pov(values, player))
 
         self.finished_games.add(game_id)
-        if len(self.finished_games) >= GAME_FLUSH_THRESHOLD:
+        if (
+            # A negative value for GAME_FLUSH_THRESHOLD means we never flush.
+            GAME_FLUSH_THRESHOLD >= 0 and 
+            len(self.finished_games) >= GAME_FLUSH_THRESHOLD
+        ):
             self.flush()
 
     def flush(self):
