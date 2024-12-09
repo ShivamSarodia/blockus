@@ -72,7 +72,8 @@ class GameplayActor:
             elif agent_config["type"] == "random":
                 agents.append(RandomAgent())
             elif agent_config["type"] == "human":
-                agents.append(HumanAgent())
+                network_name = agent_config["network"]
+                agents.append(HumanAgent(self.inference_clients[network_name]))
             elif agent_config["type"] == "policy_sampling":
                 network_name = agent_config["network"]
                 agent = PolicySamplingAgent(
@@ -93,10 +94,15 @@ class GameplayActor:
                 log_event("made_move")
         
         result = state.result()
-        log_event("game_result", [
-            [agent_configs[i]["name"], state.result()[i]]
-            for i in range(4)
-        ])
+        log_event("game_result", 
+            {
+                "scores": [
+                    [agent_configs[i]["name"], state.result()[i]]
+                    for i in range(4)
+                ],
+                "game_id": recorder_game_id,
+            }
+        )
 
         self.data_recorder.record_game_end(recorder_game_id, result)
 

@@ -3,7 +3,7 @@ development:
   profile: false
   runtime: 0
   display_logs_in_console: false
-  output_directory: "data/2024-11-23_00-37-50-doublehandedness"
+  output_directory: "data/2024-12-06_00-09-14-self-play-for-policy-weight-one"
 
 logging:
   save_interval: 3600
@@ -34,7 +34,7 @@ default_network:
 
   # One of model_path or model_directory should be specified.
   model_path: ""
-  model_directory: "data/2024-11-23_00-37-50-doublehandedness/models/"
+  model_directory: "data/2024-12-06_00-09-14-self-play-for-policy-weight-one/models/"
 
   # Frequency to check if there's a new model to load from disk.
   new_model_check_interval: 120
@@ -49,7 +49,7 @@ training:
 
   batch_size: 64
 
-  policy_loss_weight: 0.158
+  policy_loss_weight: 1.0
   learning_rate: 1.0e-3
   
   # Maximum number of samples into the past to consider for training.

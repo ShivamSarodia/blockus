@@ -3,10 +3,10 @@ development:
   profile: false
   runtime: 36000
   display_logs_in_console: true
-  output_directory: "data/2024-11-23_23-09-56-matriculant"
+  output_directory: "data/2024-12-07_23-42-39-intermitter"
 
 logging:
-  save_interval: 60
+  save_interval: 3600
   mcts_report_fraction: 0.0
   ucb_report: false
   gpu_evaluation: false
@@ -15,6 +15,7 @@ logging:
 game:
   board_size: 10
   num_moves: 6233
+  num_pieces: 21
   moves_directory: "data/moves_10/"
 
 architecture:
@@ -31,7 +32,7 @@ default_network:
 
   batch_size: 1
 
-  model_path: "data/2024-11-23_00-37-50-doublehandedness/models/001204743.pt"
+  model_path: "data/2024-11-23_00-37-50-doublehandedness/models/002190002.pt"
   model_directory: ""
   new_model_check_interval: 1.0e+6
 
@@ -52,6 +53,7 @@ default_agent:
   # This mimics the value in AlphaZero using the logic from KataGo.
   total_dirichlet_alpha: 10.83
   root_exploration_fraction: 0.0
+  move_selection_temperature: 0
 
 individual_agents:
   - name: "default"

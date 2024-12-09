@@ -3,7 +3,7 @@ development:
   profile: false
   runtime: 3600
   display_logs_in_console: false
-  output_directory: "data/2024-12-07_00-48-27-repeat-arena-for-one-vs-two-with-temp-0.3-and-randoms"
+  output_directory: "data/2024-12-08_00-11-50-arena-for-retrained-sampling-ratio-one-vs-two-with-literatist"
 
 logging:
   save_interval: 120
@@ -20,7 +20,7 @@ game:
 
 architecture:
   gameplay_processes: 6
-  coroutines_per_process: 128
+  coroutines_per_process: 256
   game_flush_threshold: 10
 
 default_network:
@@ -29,14 +29,19 @@ default_network:
   value_head_flat_layer_width: 64
   policy_head_channels: 64
   residual_blocks: 8
-  batch_size: 32
+  batch_size: "overwritten"
   new_model_check_interval: -1
 
 individual_networks:
   one:
-    model_path: "/Users/shivamsarodia/Dev/blockus/data/2024-11-23_00-37-50-doublehandedness/models/000652863.pt"
+    model_path: "/Users/shivamsarodia/Dev/blockus/data/2024-12-02_21-22-57-notebook-models/base_in_notebook_1.pt"
+    batch_size: 32
   two:
-    model_path: "/Users/shivamsarodia/Dev/blockus/data/2024-12-04_00-53-48-self-play-for-sampling-ratio-two/models/000650000.pt"
+    model_path: "/Users/shivamsarodia/Dev/blockus/data/2024-12-02_21-22-57-notebook-models/sample_ratio_two_1.pt"
+    batch_size: 32
+  literatist:
+    model_path: "/Users/shivamsarodia/Dev/blockus/data/2024-11-24_00-18-45-literatist/models/001720035.pt"
+    batch_size: 64
 
 training:
   run: false
@@ -59,7 +64,9 @@ individual_agents:
   - name: "two"
     network: "two"
     move_selection_temperature: 0.3    
-  - name: "random"
-    type: "random"
-  - name: "random"
-    type: "random"
+  - name: "literatist"
+    network: "literatist"
+    move_selection_temperature: 1.0
+  - name: "literatist"
+    network: "literatist"
+    move_selection_temperature: 1.0

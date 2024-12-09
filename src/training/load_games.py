@@ -40,6 +40,7 @@ def load_games_new(game_file_paths, with_tqdm=False):
     values = []
     valid_moves = []
     unused_pieces = []
+    players = []
 
     iterator = tqdm(game_file_paths) if with_tqdm else game_file_paths
     
@@ -54,6 +55,8 @@ def load_games_new(game_file_paths, with_tqdm=False):
                     game_ids.append(npz["game_ids"])
                 valid_moves.append(npz["valid_moves_array"])
                 unused_pieces.append(npz["unused_pieces"])
+                if "players" in npz:
+                    players.append(npz["players"])
             except BadZipFile:
                 log_event("bad_game_file", {"path": game_file})
 
@@ -67,6 +70,9 @@ def load_games_new(game_file_paths, with_tqdm=False):
         "valid_moves": np.concatenate(valid_moves),
         "unused_pieces": np.concatenate(unused_pieces),
     }
+
+    if players:
+        result["players"] = np.concatenate(players)
 
     if game_ids:
         result["game_ids"] = np.concatenate(game_ids)

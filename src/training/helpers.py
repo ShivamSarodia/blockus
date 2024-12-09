@@ -63,9 +63,9 @@ def loop_iteration(
     optimizer.zero_grad()
 
     return {
-        "value_loss": value_loss.item(),
-        "policy_loss": policy_loss.item(),
-        "loss": loss.item(),
+        "value_loss": value_loss.item() / len(boards),
+        "policy_loss": policy_loss.item() / len(boards),
+        "loss": loss.item() / len(boards),
         "batch_size": len(boards),
         "cumulative_window_fed": game_data_manager.cumulative_window_fed(),
         "ingestion_count": ingestion_count,

@@ -67,7 +67,25 @@ class PolicySamplingAgent:
             return np.random.choice(array_index_to_move_index, p=probabilities)
 
 class HumanAgent:
+    def __init__(self, inference_client: InferenceClient):
+        self.inference_client = inference_client
+
     async def select_move_index(self, state: State):
+        array_index_to_move_index = np.flatnonzero(state.valid_moves_array())        
+        player_pov_occupancies = player_pov_helpers.occupancies_to_player_pov(
+            state.occupancies,
+            state.player,
+        )
+        player_pov_valid_move_indices = player_pov_helpers.moves_indices_to_player_pov(
+            array_index_to_move_index,
+            state.player,
+        )        
+        player_pov_values, _ = await self.inference_client.evaluate(
+            player_pov_occupancies,
+            player_pov_valid_move_indices,
+        )
+        values = player_pov_helpers.values_to_player_pov(player_pov_values, -state.player)
+
         # Convert the state into the json representation for the UI.
 
         moves_ruled_out = state.moves_ruled_out[state.player]
@@ -107,8 +125,10 @@ class HumanAgent:
         print(json.dumps(
             {
                 "board": state.occupancies.astype(int).tolist(),
+                "score": np.sum(state.occupancies, axis=(1, 2)).tolist(),
                 "player": state.player,
                 "pieces": pieces,
+                "predicted_values": values.tolist(),
             }
         ))
 

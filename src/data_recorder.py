@@ -87,7 +87,7 @@ class DataRecorder:
         values = []
         valid_moves_array = []
         unused_pieces = []
-
+        players = []
         for game_id in self.finished_games:
             game = self.games[game_id]
 
@@ -100,6 +100,7 @@ class DataRecorder:
                 valid_moves_array.append(np.array(game["valid_moves_array"]))
                 values.append(np.array(game["values"]))
                 unused_pieces.append(np.array(game["unused_pieces"]))
+                players.append(np.array(game["players"]))
             del self.games[game_id]
         
         self.finished_games = set()
@@ -113,7 +114,8 @@ class DataRecorder:
         valid_moves_array = np.concatenate(valid_moves_array)
         values = np.concatenate(values)
         unused_pieces = np.concatenate(unused_pieces)
-
+        players = np.concatenate(players)
+        
         # Save the files to disk with the number of samples included, so that the
         # training script can tell from just the filename how many samples are in
         # the file.
@@ -122,6 +124,7 @@ class DataRecorder:
             game_ids=game_ids,
             boards=boards,
             policies=policies,
+            players=players,
             values=values,
             valid_moves_array=valid_moves_array,
             unused_pieces=unused_pieces,
