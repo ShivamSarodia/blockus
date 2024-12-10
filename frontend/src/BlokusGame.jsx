@@ -84,17 +84,18 @@ const PieceControls = ({ selectedPiece, setRotation, setIsFlipped, isFlipped, pi
   );
 };
 
-const GameBoard = ({ getCellState, calculatePlacementCoords, playMove, setHoverPosition }) => {
+const GameBoard = ({ getCellState, calculatePlacementCoords, playMove, setHoverPosition, lastMove }) => {
   return (
     <div className="inline-block border-2 border-gray-300">
       {Array(BOARD_SIZE).fill().map((_, i) => (
         <div key={i} className="flex">
           {Array(BOARD_SIZE).fill().map((_, j) => {
             const cellState = getCellState(i, j);
+            const showLastMove = lastMove && lastMove[i][j];
             return (
               <div
                 key={`${i}-${j}`}
-                className={`w-6 h-6 border border-gray-200 ${
+                className={`w-6 h-6 border border-gray-200 relative ${
                   cellState.filled ? PLAYER_COLORS[cellState.player] : 
                   'bg-white hover:bg-gray-100'
                 }`}
@@ -106,7 +107,13 @@ const GameBoard = ({ getCellState, calculatePlacementCoords, playMove, setHoverP
                 }}
                 onMouseEnter={() => setHoverPosition([i, j])}
                 onMouseLeave={() => setHoverPosition(null)}
-              />
+              >
+                {showLastMove && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-2 h-2 bg-black rounded-full"></div>
+                  </div>
+                )}
+              </div>
             );
           })}
         </div>
@@ -124,8 +131,19 @@ const GameStatus = ({ score, predictedValues, gameOver, result }) => {
         </div>
       )}
       {predictedValues !== null && (
-        <div className="mt-4 p-2 bg-gray-100 rounded font-mono text-sm">
-          Predicted Values: {JSON.stringify(predictedValues)}
+        <div className="mt-4 p-2 bg-gray-100 rounded">
+          <h4 className="font-medium mb-2">Predicted Values:</h4>
+          <div className="flex h-24 items-end gap-2">
+            {predictedValues.map((value, i) => (
+              <div key={i} className="flex flex-col items-center">
+                <div 
+                  className={`w-12 ${i === 0 ? 'bg-blue-500' : i === 1 ? 'bg-yellow-500' : i === 2 ? 'bg-red-500' : 'bg-green-500'}`}
+                  style={{ height: `${Math.max(value * 80, 4)}px` }}
+                ></div>
+                <div className="text-xs mt-1">{(value * 100).toFixed(1)}%</div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
       {gameOver && result && (
@@ -155,8 +173,12 @@ const BlokusGame = () => {
   const [predictedValues, setPredictedValues] = useState(null);
   const [gameOver, setGameOver] = useState(false);
   const [result, setResult] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isHumanTurn, setIsHumanTurn] = useState(true);
+  const [lastMove, setLastMove] = useState(null);
 
   const loadGameState = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch('http://127.0.0.1:8080/state');
       const state = await response.json();
@@ -190,9 +212,13 @@ const BlokusGame = () => {
       setPredictedValues(state.predicted_values);
       setGameOver(state.game_over);
       setResult(state.result);
+      setIsHumanTurn(state.is_human_turn);
+      setLastMove(state.last_move);
       setErrorMessage('');
     } catch (e) {
       setErrorMessage(`Failed to load game state: ${e.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -307,6 +333,7 @@ const BlokusGame = () => {
   };
 
   const playMove = async (coords) => {
+    setIsLoading(true);
     try {
       const response = await fetch('http://127.0.0.1:8080/move', {
         method: 'POST',
@@ -329,9 +356,13 @@ const BlokusGame = () => {
       setPredictedValues(newState.predicted_values);
       setGameOver(newState.game_over);
       setResult(newState.result);
+      setIsHumanTurn(newState.is_human_turn);
+      setLastMove(newState.last_move);
       setErrorMessage('');
     } catch (e) {
       setErrorMessage(`Failed to play move: ${e.message}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -343,24 +374,41 @@ const BlokusGame = () => {
         </div>
       )}
 
-      <AvailablePieces 
-        pieces={pieces}
-        selectedPiece={selectedPiece}
-        setSelectedPiece={setSelectedPiece}
-        currentPlayer={currentPlayer}
-        renderPiecePreview={renderPiecePreview}
-      />
+      {isLoading && (
+        <div className="mb-4 p-4 bg-blue-100 text-blue-700 rounded">
+          Loading...
+        </div>
+      )}
 
-      <PieceControls
-        selectedPiece={selectedPiece}
-        setRotation={setRotation}
-        setIsFlipped={setIsFlipped}
-        isFlipped={isFlipped}
-        pieces={pieces}
-        getTransformedPiece={getTransformedPiece}
-        renderPiecePreview={renderPiecePreview}
-        currentPlayer={currentPlayer}
-      />
+      {isHumanTurn ? (
+        <>
+          <AvailablePieces 
+            pieces={pieces}
+            selectedPiece={selectedPiece}
+            setSelectedPiece={setSelectedPiece}
+            currentPlayer={currentPlayer}
+            renderPiecePreview={renderPiecePreview}
+          />
+
+          <PieceControls
+            selectedPiece={selectedPiece}
+            setRotation={setRotation}
+            setIsFlipped={setIsFlipped}
+            isFlipped={isFlipped}
+            pieces={pieces}
+            getTransformedPiece={getTransformedPiece}
+            renderPiecePreview={renderPiecePreview}
+            currentPlayer={currentPlayer}
+          />
+        </>
+      ) : (
+        <button
+          className="mb-4 px-4 py-2 bg-blue-500 text-white rounded"
+          onClick={() => playMove([])}
+        >
+          Play AI Move
+        </button>
+      )}
 
       <div>
         <h2 className="text-xl font-bold mb-2">Game Board</h2>
@@ -369,6 +417,7 @@ const BlokusGame = () => {
           calculatePlacementCoords={calculatePlacementCoords}
           playMove={playMove}
           setHoverPosition={setHoverPosition}
+          lastMove={lastMove}
         />
         <GameStatus
           score={score}

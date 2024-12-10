@@ -54,8 +54,8 @@ default_agent:
   move_selection_temperature: 0
 
 individual_agents:
-  - name: "default"
-  - name: "default"
-  - name: "default"
   - name: "human"
     type: "human"
+  - name: "default"
+  - name: "default"
+  - name: "default"

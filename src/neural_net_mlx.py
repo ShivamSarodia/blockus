@@ -105,9 +105,11 @@ class NeuralNetMLX(nn.Module):
         # by moving the channel dimension to the last dimension to match
         # the shape expected by the convolutional block by MLX conventions.
 
-        boards = mx.transpose(boards, (0, 2, 3, 1))
+        # boards = mx.transpose(boards, (0, 2, 3, 1))
 
         x = self.convolutional_block(boards)
         for residual_block in self.residual_blocks:
             x = residual_block(x)
         return self.value_head(x), self.policy_head(x)
+        # return x
+        # return self.policy_head(x)

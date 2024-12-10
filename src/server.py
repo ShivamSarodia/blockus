@@ -8,7 +8,6 @@ import player_pov_helpers
 from inference.actor import InferenceActor
 from inference.client import InferenceClient
 from gameplay_actor import generate_agent
-from agents import HumanAgent
 from state import State
 from configuration import config, moves_data
 
@@ -17,7 +16,7 @@ NETWORKS = config()["networks"]
 AGENTS = config()["agents"]
 MOVES_DATA = moves_data()
 
-async def serialize_state(state: State, inference_client: InferenceClient):
+async def serialize_state(state: State, inference_client: InferenceClient, agents):
     array_index_to_move_index = np.flatnonzero(state.valid_moves_array())        
     player_pov_occupancies = player_pov_helpers.occupancies_to_player_pov(
         state.occupancies,
@@ -68,7 +67,7 @@ async def serialize_state(state: State, inference_client: InferenceClient):
     for piece_index in pieces_available:
         pieces.append(PIECES[piece_index])
 
-    return {
+    result = {
         "board": state.occupancies.astype(int).tolist(),
         "score": np.sum(state.occupancies, axis=(1, 2)).tolist(),
         "player": state.player,
@@ -76,7 +75,12 @@ async def serialize_state(state: State, inference_client: InferenceClient):
         "predicted_values": values.tolist(),
         "game_over": not state.valid_moves_array().any(),
         "result": state.result().tolist(),
+        "is_human_turn": agents[state.player] is None,
     }
+    if state.last_move_index is not None:
+        result["last_move"] = MOVES_DATA["new_occupieds"][state.last_move_index].tolist()
+
+    return result
 
 def run():
     ray.init(log_to_driver=True)
@@ -98,14 +102,14 @@ def run():
 
     @app.route("/state")
     async def get_state():
-        return await serialize_state(state, inference_client)
+        return await serialize_state(state, inference_client, agents)
     
     @app.route("/move", methods=["POST"])
     async def make_move():
         current_agent = agents[state.player]
 
         # If we're waiting for a human move, make the human move.
-        if isinstance(current_agent, HumanAgent):
+        if not current_agent:
             move_coordinates_occupied = request.get_json()
             move_new_occupieds = np.zeros((BOARD_SIZE, BOARD_SIZE), dtype=bool)
             for x, y in move_coordinates_occupied:
@@ -119,7 +123,7 @@ def run():
         # Make the specified move.
         state.play_move(move_index)
 
-        return await serialize_state(state, inference_client)
+        return await serialize_state(state, inference_client, agents)
 
     app.run(host="0.0.0.0", port=8080)
 

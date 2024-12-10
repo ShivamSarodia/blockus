@@ -11,7 +11,7 @@ from typing import Dict, Optional
 from configuration import config, merge_into_dict
 from data_recorder import DataRecorder
 from inference.client import InferenceClient
-from agents import PolicySamplingAgent, RandomAgent, HumanAgent
+from agents import PolicySamplingAgent, RandomAgent
 from mcts import MCTSAgent
 from state import State
 from event_logger import log_event
@@ -39,8 +39,7 @@ def generate_agent(
     elif agent_config["type"] == "random":
         return RandomAgent()
     elif agent_config["type"] == "human":
-        network_name = agent_config["network"]
-        return HumanAgent(inference_clients[network_name])
+        return None
     elif agent_config["type"] == "policy_sampling":
         network_name = agent_config["network"]
         return PolicySamplingAgent(
