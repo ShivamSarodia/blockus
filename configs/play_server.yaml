@@ -1,0 +1,61 @@
+development:
+  debug_mode: true
+  profile: false
+  runtime: 36000
+  display_logs_in_console: true
+  output_directory: "data/2024-12-07_23-42-39-intermitter"
+
+logging:
+  save_interval: 3600
+  mcts_report_fraction: 0.0
+  ucb_report: false
+  gpu_evaluation: false
+  made_move: true
+
+game:
+  board_size: 10
+  num_moves: 6233
+  num_pieces: 21
+  moves_directory: "data/moves_10/"
+
+architecture:
+  gameplay_processes: 1
+  coroutines_per_process: 1
+  game_flush_threshold: 1
+
+default_network:
+  main_body_channels: 64
+  value_head_channels: 16
+  value_head_flat_layer_width: 64
+  policy_head_channels: 64
+  residual_blocks: 8
+
+  batch_size: 1
+
+  model_path: "data/2024-11-23_00-37-50-doublehandedness/models/002190002.pt"
+  model_directory: ""
+  new_model_check_interval: 1.0e+6
+
+individual_networks:
+  opponent: {}
+
+training:
+  run: false
+
+default_agent:
+  type: "mcts"
+  network: "opponent"
+  full_move_probability: 1.0
+  full_move_rollouts: 500
+  fast_move_rollouts: "unused"
+  ucb_exploration: 1.4
+  total_dirichlet_alpha: 10.83
+  root_exploration_fraction: 0.0
+  move_selection_temperature: 0
+
+individual_agents:
+  - name: "default"
+  - name: "default"
+  - name: "default"
+  - name: "human"
+    type: "human"

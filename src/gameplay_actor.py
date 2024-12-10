@@ -6,7 +6,7 @@ import os
 import copy
 import pyinstrument
 import json
-from typing import Dict
+from typing import Dict, Optional
 
 from configuration import config, merge_into_dict
 from data_recorder import DataRecorder
@@ -21,6 +21,34 @@ USE_PROFILER = config()["development"]["profile"]
 COROUTINES_PER_PROCESS = config()["architecture"]["coroutines_per_process"]
 AGENTS = config()["agents"]
 LOG_MADE_MOVE = config()["logging"]["made_move"]
+
+def generate_agent(
+    agent_config: Dict,
+    inference_clients: Dict[str, InferenceClient],
+    data_recorder: Optional[DataRecorder],
+    recorder_game_id: Optional[int],
+):
+    if agent_config["type"] == "mcts":
+        network_name = agent_config["network"]
+        return MCTSAgent(
+            agent_config,
+            inference_clients[network_name],
+            data_recorder,
+            recorder_game_id,
+        )
+    elif agent_config["type"] == "random":
+        return RandomAgent()
+    elif agent_config["type"] == "human":
+        network_name = agent_config["network"]
+        return HumanAgent(inference_clients[network_name])
+    elif agent_config["type"] == "policy_sampling":
+        network_name = agent_config["network"]
+        return PolicySamplingAgent(
+            agent_config,
+            inference_clients[network_name],
+        )
+    else:
+        raise "Unknown agent type."
 
 @ray.remote
 class GameplayActor:
@@ -57,32 +85,15 @@ class GameplayActor:
 
         # Select four agents (without replacement)
         agent_configs = random.sample(AGENTS, k=4)
-
-        agents = []
-        for agent_config in agent_configs:
-            if agent_config["type"] == "mcts":
-                network_name = agent_config["network"]
-                agent = MCTSAgent(
-                    agent_config,
-                    self.inference_clients[network_name],
-                    self.data_recorder,
-                    recorder_game_id,
-                )
-                agents.append(agent)
-            elif agent_config["type"] == "random":
-                agents.append(RandomAgent())
-            elif agent_config["type"] == "human":
-                network_name = agent_config["network"]
-                agents.append(HumanAgent(self.inference_clients[network_name]))
-            elif agent_config["type"] == "policy_sampling":
-                network_name = agent_config["network"]
-                agent = PolicySamplingAgent(
-                    agent_config,
-                    self.inference_clients[network_name],
-                )
-                agents.append(agent)
-            else:
-                raise "Unknown agent type."
+        agents = [
+            generate_agent(
+                agent_config,
+                self.inference_clients,
+                self.data_recorder,
+                recorder_game_id,
+            )
+            for agent_config in agent_configs
+        ]
 
         game_over = False
         state = State()

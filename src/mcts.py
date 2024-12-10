@@ -1,5 +1,5 @@
 import random
-from typing import Dict
+from typing import Dict, Optional
 import numpy as np
 
 from configuration import config
@@ -25,8 +25,8 @@ class MCTSAgent:
             self,
             config: Dict,
             inference_client: InferenceClient,
-            data_recorder: DataRecorder,
-            recorder_game_id: int,
+            data_recorder: Optional[DataRecorder],
+            recorder_game_id: Optional[int],
         ):
         self.mcts_config = config
         self.inference_client = inference_client
@@ -88,7 +88,7 @@ class MCTSAgent:
                 node.children_visit_counts[node_array_index] += 1
 
         # Record the search tree result for full moves.
-        if is_full_move:
+        if is_full_move and self.data_recorder:
             # If we need to save memory, we can just save the `search_root.array_index_to_move_index` and
             # `search_root.children_visit_counts` arrays, and compute the full policy (of length NUM_MOVES)
             # when writing to disk.

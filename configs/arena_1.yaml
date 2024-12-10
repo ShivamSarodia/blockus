@@ -3,7 +3,7 @@ development:
   profile: false
   runtime: 3600
   display_logs_in_console: false
-  output_directory: "data/2024-12-08_00-11-49-arena-for-retrained-sampling-ratio-one-vs-two-with-dh"
+  output_directory: "data/2024-12-08_23-18-52-arena-for-retrained-on-less-samples-ratio-one-vs-two-with-dh"
 
 logging:
   save_interval: 120
@@ -34,10 +34,10 @@ default_network:
 
 individual_networks:
   one:
-    model_path: "/Users/shivamsarodia/Dev/blockus/data/2024-12-02_21-22-57-notebook-models/base_in_notebook_1.pt"
+    model_path: "/Users/shivamsarodia/Dev/blockus/data/2024-12-02_21-22-57-notebook-models/base_in_notebook_partials/001500048.pt"
     batch_size: 32
   two:
-    model_path: "/Users/shivamsarodia/Dev/blockus/data/2024-12-02_21-22-57-notebook-models/sample_ratio_two_1.pt"
+    model_path: "/Users/shivamsarodia/Dev/blockus/data/2024-12-02_21-22-57-notebook-models/sample_ratio_two_partials/001500016.pt"
     batch_size: 32
   dh:
     model_path: "/Users/shivamsarodia/Dev/blockus/data/2024-11-23_00-37-50-doublehandedness/models/002190002.pt"
