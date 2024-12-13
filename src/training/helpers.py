@@ -1,6 +1,8 @@
 import time
 import math
 import random
+import torch
+import torch.nn as nn
 
 def feed_window_until_amount(game_data_manager, amount_to_feed, new_data_check_interval):
     while True:
@@ -38,6 +40,9 @@ def loop_iteration(
 
     # Great, we've loaded enough data to train a new batch. Now, train on it.
     boards, policies, values = game_data_manager.sample(batch_size)
+    boards = boards.to(dtype=torch.float32, device=device)
+    policies = policies.to(dtype=torch.float32, device=device)
+    values = values.to(dtype=torch.float32, device=device)
 
     assert len(boards) == batch_size
 

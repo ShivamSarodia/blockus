@@ -18,6 +18,10 @@ def main():
     parser_server = subparsers.add_parser('server', help='Run gameplay server')
     parser_server.add_argument('--config', type=str, nargs='+', required=True, help='Paths to one or more config files')
 
+    # Subparser for 'training_unlooped'
+    parser_training_unlooped = subparsers.add_parser('training_unlooped', help='Run training for development purposes')
+    parser_training_unlooped.add_argument('--config', type=str, nargs='+', required=True, help='Paths to one or more config files')    
+
     # Parse the arguments
     args = parser.parse_args()
 
@@ -40,6 +44,12 @@ def main():
 
         import server
         server.run()
+
+    elif args.command == 'training_unlooped':
+        os.environ["CONFIG_PATHS"] = ",".join(args.config)
+
+        import training.unlooped
+        training.unlooped.run()
 
     else:
         parser.print_help()

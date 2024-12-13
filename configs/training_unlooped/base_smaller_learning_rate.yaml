@@ -1,0 +1,23 @@
+game:
+  board_size: 10
+  num_moves: 6233
+  num_pieces: 21
+  moves_directory: "data/moves_10/"
+
+default_network:
+  main_body_channels: 64
+  value_head_channels: 16
+  value_head_flat_layer_width: 64
+  policy_head_channels: 64
+  residual_blocks: 8
+
+individual_networks:
+  default: {}
+
+training:
+  batch_size: 128
+  policy_loss_weight: 0.158
+  learning_rate: 0.25e-3
+
+default_agent: {}
+individual_agents: []
