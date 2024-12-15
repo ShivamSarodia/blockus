@@ -1,8 +1,11 @@
 import os 
 import sys
 
-os.environ["CONFIG_PATHS"] = "/Users/shivamsarodia/Dev/blockus/configs/training_unlooped/way_fewer_policy_head_channels.yaml"
-# os.environ["CONFIG_PATHS"] = "/Users/shivamsarodia/Dev/blockus/configs/training_unlooped/base.yaml"
+os.environ["CONFIG_PATHS"] = "/Users/shivamsarodia/Dev/blockus/configs/training_unlooped/base.yaml"
+# os.environ["CONFIG_PATHS"] = "/Users/shivamsarodia/Dev/blockus/configs/training_unlooped/fewer_value_head_channels_and_flat_layer.yaml"
+# os.environ["CONFIG_PATHS"] = "/Users/shivamsarodia/Dev/blockus/configs/training_unlooped/fewer_value_head_channels.yaml"
+# os.environ["CONFIG_PATHS"] = "/Users/shivamsarodia/Dev/blockus/configs/training_unlooped/fewer_value_head_flat_layer.yaml"
+
 os.environ["CONFIG_OVERRIDES"] = 'game.moves_directory="/Users/shivamsarodia/Dev/blockus/data/moves_10"'
 sys.path.append("/Users/shivamsarodia/Dev/blockus/src")
 
