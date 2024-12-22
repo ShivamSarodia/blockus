@@ -87,10 +87,10 @@ class NeuralNet:
             nn.BatchNorm(net_config["policy_head_channels"]),
             ReLU(),
             Flatten(),
-            # nn.Linear(
-            #     BOARD_SIZE * BOARD_SIZE * net_config["policy_head_channels"],
-            #     NUM_MOVES,
-            # ),
+            nn.Linear(
+                BOARD_SIZE * BOARD_SIZE * net_config["policy_head_channels"],
+                NUM_MOVES,
+            ),
         ]
 
     def __call__(self, occupancies):

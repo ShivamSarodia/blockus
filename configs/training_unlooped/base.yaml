@@ -1,5 +1,3 @@
-# This is here as a placeholder -- it's the same as fewer_policy_head_channels.yaml
-
 game:
   board_size: 10
   num_moves: 6233
@@ -19,7 +17,7 @@ individual_networks:
 training:
   batch_size: 128
   policy_loss_weight: 0.158
-  learning_rate: 1.0e-3
+  learning_rate: "overridden"
 
 default_agent: {}
 individual_agents: []

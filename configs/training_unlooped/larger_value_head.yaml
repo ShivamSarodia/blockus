@@ -6,8 +6,8 @@ game:
 
 default_network:
   main_body_channels: 64
-  value_head_channels: 8
-  value_head_flat_layer_width: 32
+  value_head_channels: 32
+  value_head_flat_layer_width: 256
   policy_head_channels: 32
   residual_blocks: 10
 
@@ -17,7 +17,7 @@ individual_networks:
 training:
   batch_size: 128
   policy_loss_weight: 0.158
-  learning_rate: 1.0e-3
+  learning_rate: "overridden"
 
 default_agent: {}
 individual_agents: []

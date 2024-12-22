@@ -20,22 +20,25 @@ from configuration import config
 from neural_net import NeuralNet
 
 BOARD_SIZE = config()["game"]["board_size"]
+NUM_MOVES = config()["game"]["num_moves"]
 BATCH_SIZE = config()["training"]["batch_size"]
 
 parser = argparse.ArgumentParser(description="Benchmark PyTorch neural network")
 parser.add_argument('--dtype', type=str, default='float32', help='Data type for tensors')
+parser.add_argument('--batch-size', type=int, default=128, help='Batch size')
 
 args = parser.parse_args()
 
 NUM_BATCHES_WARM_UP = 10
 NUM_BATCHES_TO_EVALUATE = 500
 DTYPE = getattr(torch, args.dtype)
-
+BATCH_SIZE = args.batch_size
 model = NeuralNet(config()["networks"]["default"])
 model.to(dtype=DTYPE, device="mps")
 
 def time_per_eval(num_batches, batch_size, dtype, model):
     model.eval()
+
     random_arrays = np.random.random((num_batches, batch_size, 4, BOARD_SIZE, BOARD_SIZE))
 
     start = time.perf_counter()

@@ -1,7 +1,7 @@
 import os 
 import sys
 
-os.environ["CONFIG_PATHS"] = "/Users/shivamsarodia/Dev/blockus/configs/self_play.yaml"
+os.environ["CONFIG_PATHS"] = "/Users/shivamsarodia/Dev/blockus/configs/training_unlooped/base.yaml"
 os.environ["CONFIG_OVERRIDES"] = 'game.moves_directory="/Users/shivamsarodia/Dev/blockus/data/moves_10"'
 sys.path.append("/Users/shivamsarodia/Dev/blockus/src")
 
@@ -43,9 +43,10 @@ def time_per_eval(num_batches, batch_size, dtype, compiled_model):
         result = compiled_model(boards[i])
         if isinstance(result, tuple):
             for x in result:
-                np.array(x)
+                # np.array(x)
+                mx.eval(x)
         else:
-            np.array(result)
+            mx.eval(result)
 
     elapsed = time.perf_counter() - start
 

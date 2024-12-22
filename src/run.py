@@ -17,10 +17,12 @@ def main():
     # Subparser for 'server'
     parser_server = subparsers.add_parser('server', help='Run gameplay server')
     parser_server.add_argument('--config', type=str, nargs='+', required=True, help='Paths to one or more config files')
+    parser_server.add_argument('--config-override', type=str, nargs='*', required=False, help='Individual config values to override')
 
     # Subparser for 'training_unlooped'
     parser_training_unlooped = subparsers.add_parser('training_unlooped', help='Run training for development purposes')
     parser_training_unlooped.add_argument('--config', type=str, nargs='+', required=True, help='Paths to one or more config files')    
+    parser_training_unlooped.add_argument('--config-override', type=str, nargs='*', required=False, help='Individual config values to override')
 
     # Parse the arguments
     args = parser.parse_args()
@@ -41,12 +43,16 @@ def main():
         # that this process and all children processes can access it as needed to
         # load the config.
         os.environ["CONFIG_PATHS"] = ",".join(args.config)
+        if args.config_override:
+            os.environ["CONFIG_OVERRIDES"] = ",".join(args.config_override)        
 
         import server
         server.run()
 
     elif args.command == 'training_unlooped':
         os.environ["CONFIG_PATHS"] = ",".join(args.config)
+        if args.config_override:
+            os.environ["CONFIG_OVERRIDES"] = ",".join(args.config_override)
 
         import training.unlooped
         training.unlooped.run()
