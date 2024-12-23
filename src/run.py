@@ -24,6 +24,10 @@ def main():
     parser_training_unlooped.add_argument('--config', type=str, nargs='+', required=True, help='Paths to one or more config files')    
     parser_training_unlooped.add_argument('--config-override', type=str, nargs='*', required=False, help='Individual config values to override')
 
+    # Subparser for 'generate_moves'
+    parser_generate_moves = subparsers.add_parser('generate_moves', help='Generate moves for a given board')
+    parser_generate_moves.add_argument('--board_size', type=int, required=True)
+    parser_generate_moves.add_argument('--output_dir', type=str, required=True)
     # Parse the arguments
     args = parser.parse_args()
 
@@ -56,6 +60,10 @@ def main():
 
         import training.unlooped
         training.unlooped.run()
+
+    elif args.command == 'generate_moves':
+        import generate_moves
+        generate_moves.run(args.board_size, args.output_dir)
 
     else:
         parser.print_help()

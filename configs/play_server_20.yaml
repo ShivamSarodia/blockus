@@ -13,10 +13,10 @@ logging:
   made_move: true
 
 game:
-  board_size: 10
-  num_moves: 6233
+  board_size: 20
+  num_moves: 30433
   num_pieces: 21
-  moves_directory: "data/moves_10/"
+  moves_directory: "data/moves_20/"
 
 architecture:
   gameplay_processes: 1

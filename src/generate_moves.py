@@ -3,9 +3,9 @@ import numpy as np
 from tqdm import tqdm
 
 
-def main(args):
-    BOARD_SIZE = args.board_size
-    PRECOMPUTE_DIRECTORY = args.output_dir
+def run(board_size, output_dir):
+    BOARD_SIZE = board_size
+    PRECOMPUTE_DIRECTORY = output_dir
     PIECES = [
         [(0, 0), (1, 0), (2, 0), (3, 0), (4, 0)],
         [(0, 0), (1, 0), (1, 1), (2, 1), (3, 1)],
