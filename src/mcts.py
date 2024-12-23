@@ -1,5 +1,5 @@
 import random
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 import numpy as np
 
 from configuration import config
@@ -33,16 +33,25 @@ class MCTSAgent:
         self.data_recorder = data_recorder
         self.recorder_game_id = recorder_game_id
 
-    async def select_move_index(self, state: State):
+    async def select_move_index(self, state: State, shared_data: Any):
         is_full_move = random.random() < self.mcts_config["full_move_probability"]
         num_rollouts = self.mcts_config["full_move_rollouts"] if is_full_move else self.mcts_config["fast_move_rollouts"]
 
-        search_root = MCTSValuesNode(self.mcts_config)
-        await search_root.get_value_and_expand_children(state, self.inference_client)
-
+        if shared_data is None:
+            # If there's no start node, create one and expand it.
+            search_root = MCTSValuesNode(self.mcts_config)
+            await search_root.get_value_and_expand_children(state, self.inference_client, state.turn)
+        else:
+            # Otherwise, reuse the existing node.
+            search_root = shared_data
+            
+        # If this is a full move, expand the node by clearing previous counts and adding noise.
+        # We don't add noise for fast moves, and we don't expand fast moves so that we don't overwrite
+        # the counts from the prior turn.
         if is_full_move:
-            # Add noise on full moves to improve our observed policy distribution,
-            # but not on fast moves.
+            # This method gets called twice when start_node is None and it's a full move, but internally
+            # it's a no-op.
+            await search_root.get_value_and_expand_children(state, self.inference_client, state.turn)
             search_root.add_noise()
 
         for _ in range(num_rollouts):
@@ -66,9 +75,15 @@ class MCTSAgent:
 
                 next_node = nodes_visited[-1].move_index_to_child_node.get(move_index)
 
-                # If next_node does not exist, we need to break out of this loop to create that node and
-                # fetch a new value to backpropagate.
+                # If next_node does not exist, we've finished the tree traversal and it's time to
+                # create a new node + backpropagate.
                 if not next_node:
+                    break
+
+                # If next_node exists, but was last expanded at a prior turn, then during full moves
+                # we treat this as a node we've never visited. (During fast moves, we reuse the existing
+                # tree no matter when the associated node was expanded.)
+                if next_node.expanded_at_turn < state.turn and is_full_move:
                     break
 
                 nodes_visited.append(next_node)
@@ -76,8 +91,8 @@ class MCTSAgent:
             if game_over:
                 value = scratch_state.result()
             else:
-                new_node = MCTSValuesNode(self.mcts_config)
-                value = await new_node.get_value_and_expand_children(scratch_state, self.inference_client)
+                new_node = next_node or MCTSValuesNode(self.mcts_config)
+                value = await new_node.get_value_and_expand_children(scratch_state, self.inference_client, state.turn)
                 nodes_visited[-1].move_index_to_child_node[moves_played[-1]] = new_node
 
             # Now, backpropagate the value up the visited notes.
@@ -103,7 +118,15 @@ class MCTSAgent:
             )
 
         # Select the move to play now.
-        return search_root.get_move_index_to_play(state)
+        move_index = search_root.get_move_index_to_play(state)
+
+        # Set the supplemental data for the next move.
+        if self.mcts_config["reuse_tree"]:
+            shared_data = search_root.move_index_to_child_node.get(move_index)
+        else:
+            shared_data = None
+
+        return move_index, shared_data
 
 
 class MCTSValuesNode:
@@ -111,6 +134,7 @@ class MCTSValuesNode:
         self.mcts_config = mcts_config
 
         # These values are all populated when get_value_and_expand_children is called.
+        self.expanded_at_turn = None
 
         # Number of valid moves from the state associated with this node.
         self.num_valid_moves = None
@@ -196,50 +220,64 @@ class MCTSValuesNode:
 
         return move_index_selected
 
-    async def get_value_and_expand_children(self, state: State, inference_client: InferenceClient):
+    async def get_value_and_expand_children(self, state: State, inference_client: InferenceClient, turn: int):
         """
-        Populate the children arrays by calling the NN, and return
-        the value of the current state.
+        Populate the children arrays by calling the NN, and return the value of the current state.
+
+        If this method has already been called on this node (tree reuse), we clear out the children
+        arrays but we do not call the neural network again.
         """
-        valid_moves = state.valid_moves_array()
+        # If we've already expanded this node for this turn, skip everything.
+        if self.expanded_at_turn == turn:
+            return self.values
 
-        # Set up the mapping between move indices and array indices.
-        self.array_index_to_move_index = np.flatnonzero(valid_moves)
-        self.move_index_to_array_index = {
-            move_index: array_index
-            for array_index, move_index in enumerate(self.array_index_to_move_index)
-        }
-        self.num_valid_moves = len(self.array_index_to_move_index)
+        self.expanded_at_turn = turn
 
-        # Rotate the occupancies into the player POV.
-        player_pov_occupancies = player_pov_helpers.occupancies_to_player_pov(state.occupancies, state.player)
+        # If we're reusing a node from a prior turn, we already have values for most of the node
+        # values so we don't need to recompute these.
+        if self.num_valid_moves is None:
+            valid_moves = state.valid_moves_array()
 
-        # Next, we need an array of the valid moves in the rotated POV. Importantly, our array will be in
-        # the same order as self.array_index_to_move_index. This means the result of the `evaluate` call
-        # will already be in the universal POV, without needing any additional rotation.
-        #
-        # I'm a bit worried this reduces the efficacy of caching calls, and instead we must be passing in a
-        # sorted array of valid modes to ensure that each time the same board appears we're returning the same
-        # result. However, I _think_ that for a given board array one can almost always deduce which player's turn it is,
-        # and therefore there's exactly one possibility for the valid moves array we pass in. (An exception might be near
-        # the end of a game where some players don't have valid moves? I'm not sure.)
-        player_pov_valid_move_indices = player_pov_helpers.moves_indices_to_player_pov(self.array_index_to_move_index, state.player)
+            # Set up the mapping between move indices and array indices.
+            self.array_index_to_move_index = np.flatnonzero(valid_moves)
+            self.move_index_to_array_index = {
+                move_index: array_index
+                for array_index, move_index in enumerate(self.array_index_to_move_index)
+            }
+            self.num_valid_moves = len(self.array_index_to_move_index)
 
-        player_pov_values, universal_children_prior_logits = await inference_client.evaluate(
-            player_pov_occupancies,
-            player_pov_valid_move_indices,
-        )
+            # Rotate the occupancies into the player POV.
+            player_pov_occupancies = player_pov_helpers.occupancies_to_player_pov(state.occupancies, state.player)
 
-        # Rotate the player POV values back to the universal perspective.
-        universal_values = player_pov_helpers.values_to_player_pov(player_pov_values, -state.player)
+            # Next, we need an array of the valid moves in the rotated POV. Importantly, our array will be in
+            # the same order as self.array_index_to_move_index. This means the result of the `evaluate` call
+            # will already be in the universal POV, without needing any additional rotation.
+            #
+            # I'm a bit worried this reduces the efficacy of caching calls, and instead we must be passing in a
+            # sorted array of valid modes to ensure that each time the same board appears we're returning the same
+            # result. However, I _think_ that for a given board array one can almost always deduce which player's turn it is,
+            # and therefore there's exactly one possibility for the valid moves array we pass in. (An exception might be near
+            # the end of a game where some players don't have valid moves? I'm not sure.)
+            player_pov_valid_move_indices = player_pov_helpers.moves_indices_to_player_pov(self.array_index_to_move_index, state.player)
 
-        # Take the softmax. Note that invalid moves are already excluded within the evaluate call.
-        universal_children_priors = softmax(universal_children_prior_logits)
+            player_pov_values, universal_children_prior_logits = await inference_client.evaluate(
+                player_pov_occupancies,
+                player_pov_valid_move_indices,
+                state.turn,
+            )
 
+            # Rotate the player POV values back to the universal perspective.
+            universal_values = player_pov_helpers.values_to_player_pov(player_pov_values, -state.player)
+
+            # Take the softmax. Note that invalid moves are already excluded within the evaluate call.
+            universal_children_priors = softmax(universal_children_prior_logits)
+
+            self.children_priors = universal_children_priors
+            self.values = universal_values
+        
         self.children_value_sums = np.zeros((4, self.num_valid_moves), dtype=float)
         self.children_visit_counts = np.zeros(self.num_valid_moves, dtype=int)
-        self.children_priors = universal_children_priors
-        self.values = universal_values
+
         return self.values
 
     def get_move_index_to_play(self, state: State):

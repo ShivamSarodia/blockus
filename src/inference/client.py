@@ -23,19 +23,17 @@ class InferenceClient:
         self.evaluation_batch_ids = []
         self.futures = {}
 
-        # self.last_evaluation_time = time.perf_counter()
-
         # These fields are set by init_in_process.
         self.loop = None
 
-    async def evaluate(self, board: np.ndarray, move_indices: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    async def evaluate(self, board: np.ndarray, move_indices: np.ndarray, turn: int) -> Tuple[np.ndarray, np.ndarray]:
         """
         board - An occupancies board rolled and rotated into the perspective of the current player.
         move_indices - The move indices (as could be played on the rotated/rolled board) that we're interested
                        in the values for. Usually, this is the list of the valid moves on the rotated/rolled board.
                        This parameter is necessary for caching purposes, so that we only cache the moves that are
                        relevant. This method returns the policy logits in the same order as this list.
-        """      
+        """
         evaluation_id = random.getrandbits(60)
         future = self.loop.create_future()
         self.futures[evaluation_id] = future

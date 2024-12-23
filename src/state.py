@@ -35,6 +35,9 @@ class State:
         # Player 0 starts.
         self.player = 0
 
+        # Track the number of turns played.
+        self.turn = 0
+
         # Index of the previous move played, useful for rendering the game.
         if DEBUG_MODE:
             self.last_move_index = None
@@ -60,6 +63,7 @@ class State:
         new_state.occupancies = self.occupancies.copy()
         new_state.unused_pieces = self.unused_pieces.copy()
         new_state.player = self.player
+        new_state.turn = self.turn
 
         if DEBUG_MODE:
             new_state.last_move_index = self.last_move_index
@@ -96,7 +100,10 @@ class State:
         self.accumulated_scores[self.player] += MOVES["scores"][move_index]
 
         if DEBUG_MODE:
-            self.last_move_index = move_index        
+            self.last_move_index = move_index
+
+        # Increment the number of turns played.
+        self.turn += 1
         
         # Find the next player who has a valid move.
         for _ in range(4):

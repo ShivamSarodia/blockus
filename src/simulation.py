@@ -57,8 +57,8 @@ def run():
 
     # Now, start Ray actors that run gameplay.
     gameplay_actors = [
-        GameplayActor.remote(inference_clients, output_data_dir)
-        for _ in range(GAMEPLAY_PROCESSES)
+        GameplayActor.remote(i, inference_clients, output_data_dir)
+        for i in range(GAMEPLAY_PROCESSES)
     ]
     for gameplay_actor in gameplay_actors:
         gameplay_actor.run.remote()

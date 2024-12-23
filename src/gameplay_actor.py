@@ -51,11 +51,20 @@ def generate_agent(
 
 @ray.remote
 class GameplayActor:
-    def __init__(self, inference_clients: Dict[str, InferenceClient], output_data_dir: str):
+    def __init__(self, actor_index: int, inference_clients: Dict[str, InferenceClient], output_data_dir: str):
         self.inference_clients = inference_clients
         self.output_data_dir = output_data_dir
         self.data_recorder = DataRecorder(output_data_dir)
         self.profiler = None
+
+        self.agent_configs = [
+            agent for agent in AGENTS
+            if (
+                "gameplay_actors" not in agent
+                or
+                actor_index in agent.get("gameplay_actors")
+            )
+        ]
 
     async def run(self):
         print("Running gameplay process...")
@@ -83,7 +92,11 @@ class GameplayActor:
         recorder_game_id = self.data_recorder.start_game()
 
         # Select four agents (without replacement)
-        agent_configs = random.sample(AGENTS, k=4)
+        if len(self.agent_configs) == 1:
+            agent_configs = [self.agent_configs[0]] * 4
+        else:
+            agent_configs = random.sample(self.agent_configs, k=4)
+
         agents = [
             generate_agent(
                 agent_config,
@@ -96,9 +109,10 @@ class GameplayActor:
 
         game_over = False
         state = State()
+        shared_data = None
         while not game_over:
             agent = agents[state.player]
-            move_index = await agent.select_move_index(state)
+            move_index, shared_data = await agent.select_move_index(state, shared_data)
             game_over = state.play_move(move_index)
             if LOG_MADE_MOVE:
                 log_event("made_move")

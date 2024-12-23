@@ -3,7 +3,7 @@ development:
   profile: false
   runtime: 3600
   display_logs_in_console: false
-  output_directory: "data/2024-12-10_18-41-43-arena-for-trained-ratio-1.0-vs-doublehandedness"
+  output_directory: "data/2024-12-22_19-00-03-arena-for-glochidate-vs-latest-dh"
 
 logging:
   save_interval: 120
@@ -20,26 +20,25 @@ game:
 
 architecture:
   gameplay_processes: 6
-  coroutines_per_process: 128
+  coroutines_per_process: 256
   game_flush_threshold: 1
 
 default_network:
   main_body_channels: 64
   value_head_channels: 16
   value_head_flat_layer_width: 64
-  policy_head_channels: 64
-  residual_blocks: 8
-  batch_size: 16
+  policy_head_channels: 32
+  residual_blocks: 10
+  batch_size: 64
   new_model_check_interval: -1
 
 individual_networks:
-  weight_0158:
-    model_path: "/Users/shivamsarodia/Dev/blockus/data/2024-12-04_00-53-48-self-play-for-sampling-ratio-two/models/000520016.pt"
-  weight_1000:
-    model_path: "/Users/shivamsarodia/Dev/blockus/data/2024-12-06_00-09-14-self-play-for-policy-weight-one/models/000520016.pt"
+  gloch:
+    model_path: "/Users/shivamsarodia/Dev/blockus/data/2024-12-21_23-40-57-glochidiate/models/001410000.pt"
   dh:
-    model_path: "/Users/shivamsarodia/Dev/blockus/data/2024-11-23_00-37-50-doublehandedness/models/002190002.pt"
-    batch_size: 32    
+    residual_blocks: 8
+    policy_head_channels: 64
+    model_path: "/Users/shivamsarodia/Dev/blockus/data/2024-11-23_00-37-50-doublehandedness/models/002190002.pt"   
 
 training:
   run: false
@@ -54,17 +53,18 @@ default_agent:
   total_dirichlet_alpha: 10.83
   root_exploration_fraction: 0.0
   move_selection_temperature: "overwritten"
+  reuse_tree: false
 
 individual_agents:
-  - name: "weight_0158"
-    network: "weight_0158"
+  - name: "gloch_0.3"
+    network: "gloch"
     move_selection_temperature: 0.3
-  - name: "weight_1000"
-    network: "weight_1000"
-    move_selection_temperature: 0.3    
-  - name: "dh"
+  - name: "gloch_1.0"
+    network: "gloch"
+    move_selection_temperature: 1.0 
+  - name: "dh_0.3"
     network: "dh"
-    move_selection_temperature: 1.0    
-  - name: "dh"
+    move_selection_temperature: 0.3 
+  - name: "dh_1.0"
     network: "dh"
     move_selection_temperature: 1.0

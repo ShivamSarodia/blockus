@@ -1,9 +1,9 @@
 development:
   debug_mode: true
   profile: false
-  runtime: 0
+  runtime: 180
   display_logs_in_console: false
-  output_directory: "data/2024-12-21_23-40-57-glochidiate"
+  output_directory: "data/2024-12-21_23-08-26-enginehouse"
 
 logging:
   save_interval: 3600
@@ -19,7 +19,7 @@ game:
   moves_directory: "data/moves_10/"
 
 architecture:
-  gameplay_processes: 6
+  gameplay_processes: 12
   coroutines_per_process: 256
 
   # Number of games to accumulate before they're flushed to disk.
@@ -29,12 +29,12 @@ default_network:
   main_body_channels: 64
   value_head_channels: 16
   value_head_flat_layer_width: 64
-  policy_head_channels: 32
-  residual_blocks: 10
+  policy_head_channels: 64
+  residual_blocks: 8
 
   # One of model_path or model_directory should be specified.
   model_path: ""
-  model_directory: "data/2024-12-21_23-40-57-glochidiate/models/"
+  model_directory: "data/2024-11-23_00-37-50-doublehandedness/models/"
 
   # Frequency to check if there's a new model to load from disk.
   new_model_check_interval: 120
@@ -45,10 +45,11 @@ individual_networks:
   default_2: {}
 
 training:
-  run: true
-  network_name: "default_1"
+  # TODO: MAKE THIS TRUE AGAIN BEFORE NEXT SELF-PLAY
+  run: false
+  network_name: "default"
 
-  batch_size: 128
+  batch_size: 64
 
   policy_loss_weight: 0.158
   learning_rate: 1.0e-3
@@ -80,8 +81,8 @@ default_agent:
 individual_agents:
   - name: "default"
     network: "default_1"
-    gameplay_actors: [0, 1, 2]
+    gameplay_actors: [0, 1, 2, 3, 4, 5]
   - name: "default"
     network: "default_2"
-    gameplay_actors: [3, 4, 5]
+    gameplay_actors: [6, 7, 8, 9, 10, 11]
   

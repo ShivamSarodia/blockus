@@ -29,6 +29,7 @@ async def serialize_state(state: State, inference_client: InferenceClient, agent
     player_pov_values, _ = await inference_client.evaluate(
         player_pov_occupancies,
         player_pov_valid_move_indices,
+        state.turn,
     )
     values = player_pov_helpers.values_to_player_pov(player_pov_values, -state.player)
 
