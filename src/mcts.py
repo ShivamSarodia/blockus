@@ -295,7 +295,11 @@ class MCTSValuesNode:
                 }
             )
 
-        temperature = self.mcts_config["move_selection_temperature"]
+        if state.turn < self.mcts_config["temperature_turn_cutoff"]:
+            temperature = self.mcts_config["move_selection_temperature"]
+        else:
+            temperature = 0
+
         if temperature == 0:
             array_index = np.argmax(self.children_visit_counts)
         else:

@@ -1,14 +1,15 @@
 import os 
 import sys
 
-os.environ["CONFIG_PATHS"] = "/Users/shivamsarodia/Dev/blockus/configs/training_unlooped/base.yaml"
-os.environ["CONFIG_OVERRIDES"] = 'game.moves_directory="/Users/shivamsarodia/Dev/blockus/data/moves_10"'
+os.environ["CONFIG_PATHS"] = "/Users/shivamsarodia/Dev/blockus/configs/self_play_20.yaml"
+os.environ["CONFIG_OVERRIDES"] = 'game.moves_directory="/Users/shivamsarodia/Dev/blockus/data/moves_20"'
 sys.path.append("/Users/shivamsarodia/Dev/blockus/src")
 
 import argparse
 import time
 import numpy as np
 import mlx.core as mx
+import mlx.nn as nn
 from typing import Dict 
 
 from configuration import config
@@ -18,7 +19,7 @@ BOARD_SIZE = config()["game"]["board_size"]
 
 parser = argparse.ArgumentParser(description="Benchmark neural network")
 parser.add_argument('--batch-size', type=int, default=128, help='Batch size for evaluation')
-parser.add_argument('--dtype', type=str, default='float32', help='Data type for tensors')
+parser.add_argument('--dtype', type=str, default='float16', help='Data type for tensors')
 
 args = parser.parse_args()
 
@@ -27,10 +28,11 @@ NUM_BATCHES_WARM_UP = 10
 NUM_BATCHES_TO_EVALUATE = 500
 DTYPE = getattr(mx, args.dtype)
 
-model = NeuralNetMLX(config()["networks"]["default"])
+model = NeuralNetMLX(config()["networks"]["default_1"])
 model.set_dtype(DTYPE)
 model.eval()
 
+nn.quantize(model)
 compiled_model = mx.compile(model)
 # compiled_model = model
 

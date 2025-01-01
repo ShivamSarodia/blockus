@@ -30,9 +30,9 @@ def save_model(model, directory, model_name):
 
 def get_dataset(game_files):
     gamedata = load_games_new(game_files, with_tqdm=True)
-    boards_tensor = torch.from_numpy(gamedata["boards"]).to(dtype=torch.float)
-    policies_tensor = torch.from_numpy(gamedata["policies"]).to(dtype=torch.float)
-    values_tensor = torch.from_numpy(gamedata["values"]).to(dtype=torch.float)
+    boards_tensor = torch.from_numpy(gamedata["boards"]).to(dtype=torch.float32)
+    policies_tensor = torch.from_numpy(gamedata["policies"]).to(dtype=torch.float32)
+    values_tensor = torch.from_numpy(gamedata["values"]).to(dtype=torch.float32)
     valid_moves = torch.from_numpy(gamedata["valid_moves"]).to(dtype=torch.bool)
     return torch.utils.data.TensorDataset(boards_tensor, policies_tensor, values_tensor, valid_moves)
 

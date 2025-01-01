@@ -1,9 +1,8 @@
 development: 
   display_logs_in_console: true
-  output_directory: "data/2024-11-29_23-05-39-erpetologist/"
 
 logging:
-  save_interval: 1.0e+6
+  save_interval: 5
   mcts_report_fraction: 0
   ucb_report: false
   gpu_evaluation: false
@@ -16,8 +15,6 @@ architecture:
 
 default_network:
   new_model_check_interval: 10
-  model_path: ""
-  model_directory: "data/2024-11-29_23-05-39-erpetologist/models/"
   batch_size: 1
 
 training:
@@ -26,4 +23,4 @@ training:
   sampling_ratio: 1.0
   minimum_window_size: 0
   new_data_check_interval: 5
-  batch_size: 2
+  batch_size: 1

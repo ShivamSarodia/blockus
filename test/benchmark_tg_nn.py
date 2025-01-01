@@ -1,8 +1,8 @@
 import os 
 import sys
 
-os.environ["CONFIG_PATHS"] = "/Users/shivamsarodia/Dev/blockus/configs/self_play.yaml"
-os.environ["CONFIG_OVERRIDES"] = 'game.moves_directory="/Users/shivamsarodia/Dev/blockus/data/moves_10"'
+os.environ["CONFIG_PATHS"] = "/Users/shivamsarodia/Dev/blockus/configs/self_play_20.yaml"
+os.environ["CONFIG_OVERRIDES"] = 'game.moves_directory="/Users/shivamsarodia/Dev/blockus/data/moves_20"'
 sys.path.append("/Users/shivamsarodia/Dev/blockus/src")
 
 import argparse
@@ -31,7 +31,7 @@ NUM_BATCHES_TO_EVALUATE = 20
 from tinygrad import Device
 print(Device.DEFAULT)
 
-model = NeuralNet(config()["networks"]["default"])
+model = NeuralNet(config()["networks"]["default_1"])
 
 def evaluate_model(input):
     results = model(input)
@@ -41,7 +41,7 @@ compiled_model = TinyJit(evaluate_model)
 
 def time_per_eval(num_batches, batch_size, compiled_model):
     boards = [
-        Tensor.randn(batch_size, 4, BOARD_SIZE, BOARD_SIZE, dtype=dtypes.float32)
+        Tensor.randn(batch_size, 4, BOARD_SIZE, BOARD_SIZE, dtype=dtypes.int8)
         for _ in range(num_batches)
     ]
     start = time.perf_counter()

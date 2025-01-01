@@ -37,11 +37,20 @@ def run(board_size, output_dir):
     output["new_occupieds"] = []
     output["rotation_mapping"] = []
     output["piece_indices"] = []
+    output["piece_orientation_indices"] = []
+    output["placement_x"] = []
+    output["placement_y"] = []
     output["new_corners"] = []
     output["new_adjacents"] = []
 
+    piece_orientations = set()
+
     for piece_index in tqdm(range(len(PIECES))):
         occupieds_for_piece = []
+        piece_indices = []
+        piece_orientation_indices = []
+        placement_x = []
+        placement_y = []
 
         for rotation in range(4):
             for flip in range(2):
@@ -58,8 +67,18 @@ def run(board_size, output_dir):
                 min_x = min(x for x, y in piece)
                 min_y = min(y for x, y in piece)
 
+                # Sort so the same piece with squares in different orders 
+                # is considered the same.
+                piece.sort()
+
                 # Shift the piece so that the bottom left corner is at (0, 0)
                 piece = [(x - min_x, y - min_y) for x, y in piece]
+
+                # Skip if we've already done this piece orientation.
+                piece_hash = tuple(piece)
+                if piece_hash in piece_orientations:
+                    continue
+                piece_orientations.add(piece_hash)
 
                 # Find the maximum x and y values of the piece
                 max_x = max(x for x, y in piece)
@@ -68,12 +87,19 @@ def run(board_size, output_dir):
                 for x in range(BOARD_SIZE - max_x):
                     for y in range(BOARD_SIZE - max_y):
                         occupieds_for_piece.append(np.zeros((BOARD_SIZE, BOARD_SIZE), dtype=bool))
+                        piece_orientation_indices.append(len(piece_orientations))
+                        placement_x.append(x)
+                        placement_y.append(y)
+                        piece_indices.append(piece_index)
                         for piece_x, piece_y in piece:
                             occupieds_for_piece[-1][x + piece_x][y + piece_y] = True
 
-        occupieds_for_piece = np.unique(np.array(occupieds_for_piece, dtype=bool), axis=0)
+        occupieds_for_piece, indices = np.unique(np.array(occupieds_for_piece, dtype=bool), return_index=True, axis=0)
         output["new_occupieds"].append(occupieds_for_piece)
-        output["piece_indices"] += [piece_index] * occupieds_for_piece.shape[0]
+        output["piece_orientation_indices"].append(np.array(piece_orientation_indices)[indices])
+        output["placement_x"].append(np.array(placement_x)[indices])
+        output["placement_y"].append(np.array(placement_y)[indices])
+        output["piece_indices"].append(np.array(piece_indices)[indices])
 
         # Now, compute an array which maps each move to which move it would be if rotated 90 degrees.
         rotated_occupieds_for_piece = np.rot90(occupieds_for_piece, axes=(1, 2))
@@ -122,6 +148,11 @@ def run(board_size, output_dir):
             output["new_adjacents"].append(new_adjacents)
 
     output["new_occupieds"] = np.concatenate(output["new_occupieds"])
+    output["piece_indices"] = np.concatenate(output["piece_indices"])
+    output["piece_orientation_indices"] = np.concatenate(output["piece_orientation_indices"])
+    output["placement_x"] = np.concatenate(output["placement_x"])
+    output["placement_y"] = np.concatenate(output["placement_y"])
+
     NUM_MOVES = output["new_occupieds"].shape[0]
 
     rows_so_far = 0
@@ -142,6 +173,9 @@ def run(board_size, output_dir):
     output["scores"] = np.sum(output["new_occupieds"], axis=(1, 2), dtype=int)
     assert output["scores"].shape == (NUM_MOVES,)
     output["piece_indices"] = np.array(output["piece_indices"], dtype=int)
+    output["piece_orientation_indices"] = np.array(output["piece_orientation_indices"], dtype=int)
+    output["placement_x"] = np.array(output["placement_x"], dtype=int)
+    output["placement_y"] = np.array(output["placement_y"], dtype=int)
     output["new_corners"] = np.concatenate(output["new_corners"])
     output["new_adjacents"] = np.concatenate(output["new_adjacents"])
 

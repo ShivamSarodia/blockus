@@ -34,6 +34,7 @@ class ResidualBlock(nn.Module):
                 kernel_size=3,
                 stride=1,
                 padding=1,
+                bias=False,
             ),
             nn.BatchNorm2d(net_config["main_body_channels"]),
             nn.ReLU(),
@@ -43,6 +44,7 @@ class ResidualBlock(nn.Module):
                 kernel_size=3,
                 stride=1,
                 padding=1,
+                bias=False,
             ),
             nn.BatchNorm2d(net_config["main_body_channels"]),
         )
@@ -53,7 +55,7 @@ class ResidualBlock(nn.Module):
 class NeuralNet(nn.Module):
     def __init__(self, net_config: Dict):
         super().__init__()
-        
+
         self.convolutional_block = nn.Sequential(
             nn.Conv2d(
                 in_channels=4,
@@ -61,6 +63,7 @@ class NeuralNet(nn.Module):
                 kernel_size=3,
                 stride=1,
                 padding=1,
+                bias=False,
             ),
             nn.BatchNorm2d(net_config["main_body_channels"]),
             nn.ReLU(),
@@ -74,6 +77,7 @@ class NeuralNet(nn.Module):
                 in_channels=net_config["main_body_channels"],
                 out_channels=net_config["value_head_channels"],
                 kernel_size=1,
+                bias=False,
             ),
             nn.BatchNorm2d(net_config["value_head_channels"]),
             nn.ReLU(),
@@ -93,6 +97,7 @@ class NeuralNet(nn.Module):
                 in_channels=net_config["main_body_channels"],
                 out_channels=net_config["policy_head_channels"],
                 kernel_size=1,
+                bias=False,
             ),
             nn.BatchNorm2d(net_config["policy_head_channels"]),
             nn.ReLU(),

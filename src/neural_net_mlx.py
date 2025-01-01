@@ -111,5 +111,3 @@ class NeuralNetMLX(nn.Module):
         for residual_block in self.residual_blocks:
             x = residual_block(x)
         return self.value_head(x), self.policy_head(x)
-        # return x
-        # return self.policy_head(x)

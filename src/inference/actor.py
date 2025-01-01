@@ -31,7 +31,7 @@ class InferenceActor:
 
         # Include an extra .copy() here so we don't get a scary PyTorch warning about 
         # non-writeable tensors.
-        boards_tensor = torch.from_numpy(boards.copy()).to(dtype=torch.float, device="mps")
+        boards_tensor = torch.from_numpy(boards.copy()).to(dtype=torch.float16, device="mps")
         with torch.inference_mode():
             values_logits_tensor, policy_logits_tensor = self.model(boards_tensor)
         
@@ -79,21 +79,24 @@ class InferenceActor:
 
         # Otherwise, look up the latest model in a directory.
         model_dir = self.network_config["model_directory"]
-        model_paths = [
-            os.path.join(model_dir, filename)
-            for filename in os.listdir(model_dir)
-            if (
-                os.path.isfile(os.path.join(model_dir, filename)) and 
-                filename.endswith(".pt")
-            )
-        ]
+        current_time = time.time()
+        model_paths = []
+        with os.scandir(model_dir) as entries:
+            for entry in entries:
+                if (
+                    entry.is_file() and 
+                    entry.name.endswith(".pt") and
+                    current_time - entry.stat().st_mtime > 15
+                ):
+                    model_paths.append(entry.path)
         return max(model_paths)
     
     def _load_model(self, path):
         self.model = NeuralNet(self.network_config).to("mps")
         self.model.load_state_dict(torch.load(path, weights_only=True))
-        self.model_path = path
+        self.model.to(dtype=torch.float16)
         self.model.eval()
+        self.model_path = path
         log_event(
             "loaded_model",
             { "model_name": path.split("/")[-1].split(".")[0] }

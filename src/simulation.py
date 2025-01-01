@@ -4,6 +4,7 @@ import subprocess
 import ray.exceptions
 import traceback
 import os
+import glob
 import json
 
 from configuration import config
@@ -86,8 +87,8 @@ def run():
                 copy_ray_logs(output_data_dir)
                 logs_last_copied = current_time
 
-            # Sleep 60 seconds before checking again.
-            time.sleep(60)
+            # Sleep about 60 seconds before checking again.
+            time.sleep(min(60, LOG_SAVE_INTERVAL))
 
     except KeyboardInterrupt:
         print("Got KeyboardInterrupt...")
@@ -112,10 +113,9 @@ def generate_output_data_dir():
     return BASE_OUTPUT_DIRECTORY
 
 def copy_ray_logs(output_data_dir):
-    output_file_path = os.path.join(
-        output_data_dir,
-        f"logs_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')}.txt",
-    )
+    output_file_name = f"logs_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S_%f')}.txt"
+    output_file_path = os.path.join(output_data_dir, output_file_name)
+
     print(f"Copying Ray logs...")
     with open(output_file_path, "w") as output_file:
         subprocess.run(
@@ -125,3 +125,9 @@ def copy_ray_logs(output_data_dir):
             stderr=subprocess.PIPE
         )
     print(f"Done copying Ray logs to {output_file_path}.")
+
+    # Delete any previous logs
+    for file in glob.glob(os.path.join(output_data_dir, "logs_*.txt")):
+        if file.endswith(output_file_name):
+            continue
+        os.remove(file)
